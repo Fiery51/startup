@@ -1,4 +1,5 @@
-# Your startup name here
+# Friendzone
+
 
 [My Notes](notes.md)
 
@@ -26,7 +27,7 @@ For this deliverable I did the following. I checked the box `[x]` and added a de
 
 ### Elevator pitch
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+Friendzone is the ultimate place for meeting and making new friends. Friendzone is a free platform that allows you to connect and meet others through various different activities! Through the use of lobbies, it allows anyone in the area to join in on activities, setting a low pressure time, and activity for people to join in! Through the use of online chats as well, users can coordinate and go above and beyond what the base lobby system offers, bringing people together!
 
 ### Design
 
@@ -43,7 +44,12 @@ sequenceDiagram
 
 ### Key features
 
-- Describe your key feature
+- Lobbies
+    - Activity
+    - Description
+    - Location
+    - Start/End Time
+    - 
 - Describe your key feature
 - Describe your key feature
 
@@ -51,12 +57,12 @@ sequenceDiagram
 
 I am going to use the required technologies in the following ways.
 
-- **HTML** - Description here
-- **CSS** - Description here
-- **React** - Description here
-- **Service** - Description here
-- **DB/Login** - Description here
-- **WebSocket** - Description here
+- **HTML** - This will be the skeleton of the website, this is the technology that holds what words are displayed and what content is displayed on each page.
+- **CSS** - CSS is used for styling the page! CSS will allow me to create an aesthetically pleasing website, attracting users to our website and helping them stay with frictionless experience.
+- **React** - React is a tool that helps me as a developer create the website faster. It comes with features that allow me to style and use individual components of one portion of the website, in others, speeding up development time and helping keep the frontend organized. React will also allow the users to navigate around the website, getting from one page to another.  
+- **Service** - This is the component of our website that makes it work! Through the use of oAuth I can allow users the flexibility of logging in with different accounts, such as with a google account, while still being able to customize their experience while on my website. This is also what serves content, bridging the gap between things such as what users see and what is stored, and what other users may contribute to the website! For my website specifically there will be dynamically created routes for each of the different lobbies, there will be individual profile website routes, and routes that allow users to login and authenticate themselves. 
+- **DB/Login** - This is where we will store user information. This is what allows the website to save information about users, such as their name, their chat history, their preferences, any and all information is stored in the database. With logins it allows us to create a more custom and personalized experience for each user, and what seperates one person between another. It will function primarily as an idenifier, with the option to creating a recomendation system to keep users engaged and serve them content that is tuned to what they want to go do. 
+- **WebSocket** - Online chats and finding activities will be a major part of this website, and through the use of WebSockets it allows the website to communicate live information directly to the user in real time. Within the world of chats this prevents the need to refresh the page to see if new messages were sent, it allows us to update the status of lobbies in real time, and allows users to see if others are online in real time!
 
 ## 🚀 AWS deliverable
 
