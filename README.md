@@ -49,6 +49,7 @@ sequenceDiagram
     - Description
     - Location
     - Start/End Time
+    - Lobby specific and individual message chats
     - 
 - Describe your key feature
 - Describe your key feature
