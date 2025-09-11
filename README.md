@@ -3,7 +3,7 @@
 
 [My Notes](notes.md)
 
-A brief description of the application here. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+The Friendzone is a platform for students to meet new friends through activity lobbies, chat, and profiles. It helps drive connection between people by providing safe activities that members can attend, helping create new connections between people on college campus's!
 
 
 > [!NOTE]
@@ -19,28 +19,37 @@ A brief description of the application here. Lorem ipsum dolor sit amet, consect
 
 For this deliverable I did the following. I checked the box `[x]` and added a description for things I completed.
 
-- [ ] Proper use of Markdown
-- [ ] A concise and compelling elevator pitch
-- [ ] Description of key features
-- [ ] Description of how you will use each technology
-- [ ] One or more rough sketches of your application. Images must be embedded in this file using Markdown image references.
+- [x] Proper use of Markdown
+- [x] A concise and compelling elevator pitch
+- [x] Description of key features
+- [x] Description of how you will use each technology
+- [x] One or more rough sketches of your application. Images must be embedded in this file using Markdown image references.
 
 ### Elevator pitch
 
 Friendzone is the ultimate place for meeting and making new friends. Friendzone is a free platform that allows you to connect and meet others through various different activities! Through the use of lobbies, it allows anyone in the area to join in on activities, setting a low pressure time, and activity for people to join in! Through the use of online chats as well, users can coordinate and go above and beyond what the base lobby system offers, bringing people together!
 
 ### Design
+#### Login Page
+![Login Page Sketch](ProfilePageWebDevelopment.jpg)
 
-![Design image](placeholder.png)
+This will be the main landing page. From here this is how users sign up for an account, or if already users, sign in! We will have options to sign in with google or outlook by using OAuth, allowing more options for users to sign up with. 
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+#### Lobby Select Page
+![Lobby Discovery Page Sketch](LobbySelectWebDevelopment.jpg)
 
-```mermaid
-sequenceDiagram
-    actor You
-    actor Website
-    You->>Website: Replace this with your design
-```
+This will the main sign in page where users can sign up and find activities to do with others! From here lobbies will popup in individual cards where you can see light details about them, and you can have the options to filter through to find events relavant to you. You can join and view in depth activites from this page. 
+
+#### Lobby Detail Page
+![Lobby Detail Sketch](LobbyDetailWebDevelopment.jpg)
+
+This is the in depth page where you can view specific event details including but not limited to: Event name, description, location, time, members attending. From here you can also chat with others attending to pre arrange if needed and to get to know people before you show up!
+
+#### Profile Page
+![Profile Page Sketch](ProfilePageWebDevelopment.jpg)
+
+This is your personal profile, others can view and learn about what you like. This page will be similar to most social media personal profile pages. 
+
 
 ### Key features
 
@@ -49,10 +58,11 @@ sequenceDiagram
     - Description
     - Location
     - Start/End Time
-    - Lobby specific and individual message chats
-    - 
-- Describe your key feature
-- Describe your key feature
+    - Lobby available chats
+    - Lists of users who plan on going to an activity
+- Lobby Discovery Page
+- Basic Profile Page
+- Direct messaging
 
 ### Technologies
 
@@ -139,6 +149,3 @@ For this deliverable I did the following. I checked the box `[x]` and added a de
 - [ ] **Data sent over WebSocket connection** - I did not complete this part of the deliverable.
 - [ ] **WebSocket data displayed** - I did not complete this part of the deliverable.
 - [ ] **Application is fully functional** - I did not complete this part of the deliverable.
-
-
-I was told to edit this
