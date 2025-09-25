@@ -85,15 +85,15 @@ For this deliverable I did the following. I checked the box `[x]` and added a de
 
 For this deliverable I did the following. I checked the box `[x]` and added a description for things I completed.
 
-- [ ] **HTML pages** - I did not complete this part of the deliverable.
-- [ ] **Proper HTML element usage** - I did not complete this part of the deliverable.
-- [ ] **Links** - I did not complete this part of the deliverable.
-- [ ] **Text** - I did not complete this part of the deliverable.
-- [ ] **3rd party API placeholder** - I did not complete this part of the deliverable.
-- [ ] **Images** - I did not complete this part of the deliverable.
-- [ ] **Login placeholder** - I did not complete this part of the deliverable.
-- [ ] **DB data placeholder** - I did not complete this part of the deliverable.
-- [ ] **WebSocket placeholder** - I did not complete this part of the deliverable.
+- [x] **HTML pages** - I created: dashboard.html, index.html, lobbyInfo.html, login.html, ProfileSkeleton.html pages. These are the main html pages I will need for my website.
+- [x] **Proper HTML element usage** - I used HTML elements properly to create the structure of each page.
+- [x] **Links** - I linked my github, as well as links to navigate to each of the different pages.
+- [x] **Text** - Most of my web pages are skeleton web pages, where text and information will be added dynamically via JS. Currently in place are placeholder text, or containers to which content will be added into.
+- [x] **3rd party API placeholder** - Within the login page, a clear section was created to be a placeholder for where I will incooporate a 3rd party API.
+- [x] **Images** - I used a placeholder profile image within the profile skeleton html document.
+- [x] **Login placeholder** - I created a login.html page, that is a placeholder/skeleton of which I will create the login page on.
+- [x] **DB data placeholder** - I used filler data for a few of the web pages with example text to immitate what might come from my database.
+- [x] **WebSocket placeholder** - Within the lobby info page its going to use a chat, this is how websockets will be used within my website and incooporated.
 
 ## 🚀 CSS deliverable
 
