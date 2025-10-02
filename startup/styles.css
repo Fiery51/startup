@@ -1,0 +1,23 @@
+body{
+    background-color: #328aaa;
+    color: white;
+}
+
+footer{
+    margin-top: auto;
+    background-color: #194555;
+}
+
+header{
+    background-color: #26677f;
+    border-radius: 5px;
+    box-shadow: 1px 1px;
+    margin-bottom: 5%;
+}
+
+
+nav{
+    display: flex;
+    margin: auto;
+    gap: 10%;
+}

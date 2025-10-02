@@ -97,6 +97,8 @@ For this deliverable I did the following. I checked the box `[x]` and added a de
 
 ## 🚀 CSS deliverable
 
+Color Theme: #328aaa - Background   #194555 - Cards and Boxs   #4bcfff - Titles and such
+
 For this deliverable I did the following. I checked the box `[x]` and added a description for things I completed.
 
 - [ ] **Header, footer, and main content body** - I did not complete this part of the deliverable.
