@@ -66,3 +66,27 @@ main{
     border-radius: 12px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
+
+
+
+#LobbyContainer{
+    display: flex;
+    justify-content: space-evenly;
+    flex-wrap: wrap;
+    gap: 0.5%;
+    padding: 2.5%;
+}
+
+.lobby{
+    margin-top: 3%;
+    margin-left: 1%;
+    margin-right: 1%;
+    flex: 1 1 250px;
+    max-width: 150px;
+    background: #4099e2;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    padding: 20px;
+    text-align: center;
+}
