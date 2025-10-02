@@ -71,7 +71,6 @@ main{
 
 #LobbyContainer{
     display: flex;
-    justify-content: space-evenly;
     flex-wrap: wrap;
     gap: 0.5%;
     padding: 2.5%;
@@ -89,4 +88,107 @@ main{
     box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     padding: 20px;
     text-align: center;
+}
+
+
+#LobbyInfoContainer{
+    display: grid;
+    grid-template-columns: 1fr 1fr 2fr;  /* chat column is wider */
+    gap: 2rem;
+    width: min(1200px, 100%);
+    margin: 2rem auto;
+    align-items: start;
+    padding: 0 1rem;
+}
+
+#Members{
+    display: flex;
+    flex-direction: column;
+    gap: .75rem;
+    text-align: center;
+}
+
+#Members div{
+    margin-top: 5%;
+    justify-content: center;
+    text-align: center;
+}
+
+.member{
+    background-color: rgba(185, 179, 179, 0.486);
+    border-radius: 5px;
+    padding: 5px;
+}
+
+#location{
+    text-align: center;
+}
+
+#Chat {
+    display: flex;
+    flex-direction: column;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 12px;
+    padding: 1rem;
+    min-height: 60vh;        /* feel free to tweak */
+}
+
+.chat-log {
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+    overflow: auto;
+    height: 100%;            /* take remaining height */
+    padding-right: .25rem;   /* room for scrollbar */
+}
+
+.message {
+    max-width: 70%;
+    padding: .6rem .8rem;
+    border-radius: 14px;
+    line-height: 1.3;
+    word-wrap: break-word;
+}
+
+.message.them {
+    align-self: flex-start;
+    background: rgba(255,255,255,0.15);
+    border-top-left-radius: 4px;
+}
+
+.message.me {
+    align-self: flex-end;
+    background: #4bcfff;
+    color: #073042;
+    border-top-right-radius: 4px;
+}
+
+.chat-input {
+    display: flex;
+    gap: .5rem;
+    margin-top: 1rem;
+}
+
+.chat-input textarea {
+    flex: 1;
+    min-height: 48px;
+    resize: vertical;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.3);
+    padding: .5rem .75rem;
+    background: rgba(255,255,255,0.1);
+    color: white;
+}
+
+.chat-input button {
+    padding: 0 .9rem;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    background: #4bcfff;
+    color: #073042;
+}
+
+.chat-input button:hover {
+    filter: brightness(0.95);
 }
