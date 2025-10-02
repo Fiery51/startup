@@ -228,3 +228,88 @@ main{
     gap: 5vh;
     margin-bottom: 15%;
 }
+
+@media (max-width: 768px) {
+
+  /* NAV: horizontal → vertical */
+  nav {
+    flex-direction: column;
+    align-items: stretch;   /* make links full width */
+    gap: .75rem;            /* smaller spacing */
+    width: 100%;
+    padding: 0 1rem;
+  }
+
+  nav a {
+    text-align: center;
+  }
+
+  /* MAIN content: center and stack children if any */
+  main {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0 1rem;
+  }
+
+  /* Hero: already column, just reduce margins/font size */
+  #landing-HeroSection {
+    margin: 1.5rem auto 2.5rem;
+    font-size: large;
+    width: 100%;
+  }
+
+  /* Lobby cards: use full row (2 per row-ish) */
+  #LobbyContainer {
+    gap: .75rem;
+    padding: 1rem;
+    justify-content: center;
+  }
+
+  .lobby {
+    flex: 1 1 45%;
+    max-width: none;      /* let them grow */
+    margin: 0;            /* gap handles spacing */
+  }
+
+  /* Lobby info grid: collapse to one column */
+  #LobbyInfoContainer {
+    display: grid;
+    grid-template-columns: 1fr;   /* stack columns */
+    gap: 1rem;
+    width: 100%;
+    padding: 0 1rem;
+    margin: 1rem auto;
+  }
+
+  /* Chat: keep vertical layout but make messages wider on narrow screens */
+  #Chat { min-height: 50vh; }
+  .message { max-width: 90%; }
+
+  /* Bio: row → column */
+  .BioContainer {
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 10%;
+  }
+
+  .bio {
+    max-width: 100%;
+    margin: 0;            /* let container gap handle spacing */
+    padding: 1rem;
+  }
+
+  .interests { margin: 0; }
+
+  /* Login: already column; just add breathing room */
+  .loginContainer {
+    gap: 2rem;
+    padding: 0 1rem;
+    margin-bottom: 10%;
+  }
+
+  /* Images: keep aspect ratio nicely on small screens */
+  .profileImg {
+    width: 48px;
+    height: auto;         /* avoid height: 100% distortion */
+  }
+}

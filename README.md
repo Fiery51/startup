@@ -101,12 +101,12 @@ Color Theme: #328aaa - Background   #194555 - Cards and Boxs   #4bcfff - Titles 
 
 For this deliverable I did the following. I checked the box `[x]` and added a description for things I completed.
 
-- [ ] **Header, footer, and main content body** - I did not complete this part of the deliverable.
-- [ ] **Navigation elements** - I did not complete this part of the deliverable.
-- [ ] **Responsive to window resizing** - I did not complete this part of the deliverable.
-- [ ] **Application elements** - I did not complete this part of the deliverable.
-- [ ] **Application text content** - I did not complete this part of the deliverable.
-- [ ] **Application images** - I did not complete this part of the deliverable.
+- [X] **Header, footer, and main content body** - Styled the header, main, and footer portions
+- [X] **Navigation elements** - Nav bar has been created and styled!
+- [X] **Responsive to window resizing** - Smaller devices will get a differenent nav bar layout!
+- [X] **Application elements** - Elements are all styled!
+- [X] **Application text content** - Styled the text!
+- [X] **Application images** - Images have been resized to appropriate sizes and placed roughly where they need to be!
 
 ## 🚀 React part 1: Routing deliverable
 
