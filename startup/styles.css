@@ -49,6 +49,8 @@ a:visited {
 
 main{
     display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 #landing-HeroSection{
@@ -216,4 +218,13 @@ main{
 .interests{
     margin-top: 2.5%;
     margin-left: 2.5%;
+}
+
+.loginContainer{
+    display: flex;
+    flex-direction: column;
+    text-align: center;
+    justify-content: center;
+    gap: 5vh;
+    margin-bottom: 15%;
 }
