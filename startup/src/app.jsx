@@ -26,8 +26,8 @@ export default function App() {
           <Routes>
             <Route path='/' element={<Landing />} exact />
             <Route path='/dashboard' element={<Dashboard />} />
-            <Route path='/lobby' element={<LobbyInfo />} />
-            <Route path='/profile' element={<ProfileSkeleton />} />
+            <Route path='/lobbyinfo' element={<LobbyInfo />} />
+            <Route path='/profileskeleton' element={<ProfileSkeleton />} />
             <Route path='/login' element={<Login />} />
           </Routes>
 

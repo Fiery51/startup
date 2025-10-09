@@ -3,7 +3,7 @@ import '../styles.css';
 
 export function Login() {
   return (
-    <main className="container-fluid bg-secondary text-center">
+    <main>
       <div className="loginContainer">
         <h1>Login</h1>
         <form>

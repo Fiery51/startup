@@ -4,7 +4,7 @@ import '../styles.css';
 
 export function Dashboard() {
   return (
-    <main classNameName="container-fluid bg-secondary text-center">
+    <main>
       <div>
             <h2>Open Lobbys</h2>
             <select name="Filter" id="Filter">

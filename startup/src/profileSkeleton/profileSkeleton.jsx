@@ -4,7 +4,7 @@ import '../styles.css';
 
 export function ProfileSkeleton() {
   return (
-    <main className="container-fluid bg-secondary text-center">
+    <main>
       <div className="BioContainer">
             <div className="bio">
                 <h1>John Smith</h1>
