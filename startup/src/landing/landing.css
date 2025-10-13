@@ -1,10 +1,17 @@
+/* =========================================================
+   Landing page styles (organized to mirror sections)
+   - Hero
+   - Features
+   - Trending + Aside
+   - FAQ
+   ========================================================= */
+
 .main--landing{
   display:block;
   padding: 2rem 1rem 3rem;
 }
 
-
-/* --- Kynectra button (no Bootstrap collisions) --- */
+/* ---- Buttons ---- */
 .kbtn{
   border: 1px solid rgba(0,0,0,.1);
   border-radius: 14px;
@@ -25,36 +32,9 @@
 .kbtn:visited { color: rgb(var(--text)); }
 .kbtn.kbtn-primary:visited { color: #fff; }
 
-/* --- Fine-tune landing typography/spacing --- */
-.hero-title{
-  margin:.75rem 0 0;
-  font-weight: 900;                /* bolder headline like the mock */
-  letter-spacing: -0.02em;
-}
-.hero-sub{ margin-top:.75rem; line-height:1.6; }
-
-/* --- Right preview card polish --- */
-.hero-card{
-  padding: 1rem;
-  border-radius: 22px;
-  box-shadow: 0 10px 30px rgba(2,132,199,.12), 0 2px 8px rgba(0,0,0,.06);
-}
-
-/* Lobby preview chip */
-.lobby{
-  padding: 14px;
-  border-radius: 16px;
-}
-.lobby--preview{
-  background: #3b97e0;         /* slightly deeper sky to match screenshot */
-  color: white;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.15);
-}
-.lobby-meta{ opacity:.9; font-size:.9rem; }
-.lobby-title{ margin:.4rem 0 .25rem; font-weight:800; font-size:1.05rem; color:white; }
-.lobby-view{ margin-top:.6rem; }
-
-/* --- Soft gradient halo behind the card --- */
+/* =========================================================
+   HERO
+   ========================================================= */
 #landing-HeroSection{
   margin: 3rem auto 2rem;
   max-width: 1100px;
@@ -63,10 +43,52 @@
   gap: 2rem;
   align-items: start;
 }
+
+.hero-title{
+  margin:.75rem 0 0;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+.hero-sub{ margin-top:.75rem; line-height:1.6; }
+.hero-accent{ color: rgb(var(--brand)); }
+
+.hero-cta{
+  margin-top: 1.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: .75rem;
+}
+.hero-bullets{
+  margin-top: 1.5rem;
+  display: flex;
+  gap: 1.5rem;
+  color: rgb(var(--muted));
+  font-size: .95rem;
+  list-style: none;
+  padding: 0;
+}
+.hero-eyebrow{
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  background: rgba(56,189,248,.12);
+  color: rgb(2,132,199);
+  border: 1px solid rgba(56,189,248,.35);
+  border-radius: 999px;
+  padding: .25rem .75rem;
+  font-size: .9rem;
+  font-weight: 600;
+}
+
+/* Hero right preview card + halo */
 .hero-right{
   position: relative;
 }
-.hero-right .hero-card { max-width: 440px; justify-self: start; }
+.hero-right .hero-card {
+  padding: 1.25rem 1.5rem;
+  max-width: 440px;
+  justify-self: start;
+}
 .hero-right::after{
   content:'';
   position:absolute;
@@ -79,29 +101,50 @@
   pointer-events:none;
 }
 
-/* shared section spacing */
+/* Lobby preview chip inside hero card */
+.lobby{
+  padding: 14px;
+  border-radius: 16px;
+}
+.lobby--preview{
+  background: #3b97e0;
+  color: white;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.15);
+}
+.lobby-meta{ opacity:.9; font-size:.9rem; }
+.lobby-title{ margin:.4rem 0 .25rem; font-weight:800; font-size:1.05rem; color:white; }
+.lobby-view{ margin-top:.6rem; }
+
+/* =========================================================
+   FEATURES
+   ========================================================= */
 .section{ padding: 2.5rem 0; }
 
-/* ========== Features ========== */
 .features-grid{
   display:grid;
   grid-template-columns: repeat(3,1fr);
   gap: 1rem;
 }
-.feature-card{ padding: 1rem; }
+.feature-card{
+  padding: 1rem;
+  border-radius: 20px;
+  box-shadow: 0 1px 0 rgba(0,0,0,.04), 0 8px 30px rgba(0,0,0,.05);
+}
 .feature-card h3{ margin:.25rem 0 .25rem; }
 .feature-icon{
   width: 40px; height: 40px; border-radius:12px;
   display:grid; place-items:center;
-  background: rgba(56,189,248,.12);
-  color: rgb(2,132,199);
+  background: rgba(56,189,248,.15);
+  color: rgb(14,165,233);
   font-size: 1.1rem; margin-bottom:.5rem;
 }
 
-/* ========== Trending + Aside ========== */
+/* =========================================================
+   TRENDING + ASIDE
+   ========================================================= */
 .trending-grid{
   display:grid;
-  grid-template-columns: 2fr 1fr;  /* list (2 cols) + sticky aside */
+  grid-template-columns: 2fr 1fr;
   gap: 1.25rem;
   align-items: start;
 }
@@ -110,7 +153,7 @@
 .trending-list{
   display:grid;
   grid-template-columns: repeat(3, minmax(0,1fr));
-  gap: 1rem;
+  gap: .9rem;
 }
 .lobby-card{ padding: .9rem; }
 .lobby-chip{
@@ -124,9 +167,13 @@
 .aside-card{
   position: sticky; top: 6rem;
   padding: 1rem; display:flex; flex-direction:column; gap:.75rem;
+  border-radius: 20px;
+  box-shadow: 0 1px 0 rgba(0,0,0,.04), 0 8px 30px rgba(0,0,0,.05);
 }
 
-/* ========== FAQ ========== */
+/* =========================================================
+   FAQ
+   ========================================================= */
 .faq-grid{
   display:grid; grid-template-columns: 1fr 2fr; gap: 1.25rem; align-items:start;
 }
@@ -135,9 +182,11 @@
 .faq-cards{
   display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 1rem;
 }
-.qa-card{ padding: 1rem; }
+.qa-card{ padding: 1rem; border-radius: 18px; }
 
-/* Responsive */
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
 @media (max-width: 1000px){
   .features-grid{ grid-template-columns: 1fr 1fr; }
   .trending-list{ grid-template-columns: 1fr 1fr; }
@@ -149,9 +198,6 @@
   .faq-grid{ grid-template-columns: 1fr; }
   .faq-cards{ grid-template-columns: 1fr; }
 }
-
-
-/* Mobile tighten */
 @media (max-width: 900px){
   .hero-title{ font-size: clamp(1.9rem, 5.5vw, 2.4rem); }
   .hero-sub{ margin-top:.5rem; }

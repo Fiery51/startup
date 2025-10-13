@@ -20,27 +20,32 @@ body{
 main{ display:block; } /* pages define layout themselves */
 
 /* ========== HEADER / NAV / FOOTER (shared) ========== */
+/* Match prototype: translucent header with subtle border */
 header{
-  background:#26677f;
-  border-radius:5px;
-  box-shadow:1px 1px rgba(0,0,0,.12);
-  margin-bottom:5%;
+  background: rgba(255,255,255,0.6);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(0,0,0,.08);
+  border-radius: 0;
+  box-shadow: none;
+  margin-bottom: 5%;
 }
 nav{
   display:flex; margin:auto; gap:4%;
 }
 nav a{
-  background:#1e5f74;
-  color:#e9f7ff;
+  background: transparent;
+  color: rgb(var(--text));
   padding: .45rem .9rem;
-  border-radius: 999px;
+  border-radius: 10px;
   border: none;
-  font-weight: 600;
+  font-weight: 500;
+  text-decoration: none;
 }
-nav a:hover{ background:#184e60; text-decoration:none; }
+nav a:hover{ background: rgba(0,0,0,.05); text-decoration:none; }
 
 a:active{ color:#003d99; }
-header nav a:visited { color: #e9f7ff; }
+header nav a:visited { color: rgb(var(--text)); }
 
 footer{
   margin-top:auto;
@@ -51,9 +56,10 @@ footer{
 /* ========== UTILITIES (reusable) ========== */
 .container-fluid{ max-width:1100px; margin:0 auto; padding:0 1rem; }
 
+/* Unified card look (matches prototype) */
 .card{
   background: rgb(var(--card));
-  border-radius: 18px;
+  border-radius: 20px;
   box-shadow: 0 1px 0 rgba(0,0,0,.04), 0 8px 30px rgba(0,0,0,.05);
   border: 1px solid rgba(0,0,0,.05);
 }
@@ -73,8 +79,7 @@ footer{
 .btn-primary{ background: rgb(var(--brand)); color:white; border-color:transparent; }
 .btn-primary:hover{ filter:brightness(.98); }
 
-/* ========== OTHER PAGES (shared building blocks you already use) ========== */
-/* Dashboard cards grid */
+/* ========== OTHER PAGES (shared building blocks) ========== */
 #LobbyContainer{
   display:flex; flex-wrap:wrap; gap:.5%; padding:2.5%;
 }
@@ -123,16 +128,11 @@ footer{
 .interests{ margin-top:2.5%; margin-left:2.5%; }
 .loginContainer{ display:flex; flex-direction:column; text-align:center; justify-content:center; gap:5vh; margin-bottom:15%; }
 
-/* ========== SHARED RESPONSIVE ========== */
-@media (max-width: 900px){
-  /* nothing yet; landing has its own file */
-}
-
+/* ========== RESPONSIVE ========== */
 @media (max-width: 768px){
   nav{ flex-direction:column; align-items:stretch; gap:.75rem; width:100%; padding:0 1rem; }
   nav a{ text-align:center; }
 
-  /* generic page layout fallbacks */
   #LobbyInfoContainer{ grid-template-columns:1fr; gap:1rem; width:100%; padding:0 1rem; margin:1rem auto; }
   #Chat{ min-height:50vh; }
   .message{ max-width:90%; }
