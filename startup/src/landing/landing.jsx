@@ -1,5 +1,6 @@
 import React from 'react';
 import '../styles.css';
+import './landing.css';
 import { BrowserRouter, NavLink, Routes, Route} from 'react-router-dom';
 import {Login} from '../login/login'
 
