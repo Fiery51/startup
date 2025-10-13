@@ -79,6 +79,78 @@
   pointer-events:none;
 }
 
+/* shared section spacing */
+.section{ padding: 2.5rem 0; }
+
+/* ========== Features ========== */
+.features-grid{
+  display:grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 1rem;
+}
+.feature-card{ padding: 1rem; }
+.feature-card h3{ margin:.25rem 0 .25rem; }
+.feature-icon{
+  width: 40px; height: 40px; border-radius:12px;
+  display:grid; place-items:center;
+  background: rgba(56,189,248,.12);
+  color: rgb(2,132,199);
+  font-size: 1.1rem; margin-bottom:.5rem;
+}
+
+/* ========== Trending + Aside ========== */
+.trending-grid{
+  display:grid;
+  grid-template-columns: 2fr 1fr;  /* list (2 cols) + sticky aside */
+  gap: 1.25rem;
+  align-items: start;
+}
+.trending-header h3{ margin:0; }
+.trending-header p{ margin:.25rem 0 1rem; }
+.trending-list{
+  display:grid;
+  grid-template-columns: repeat(3, minmax(0,1fr));
+  gap: 1rem;
+}
+.lobby-card{ padding: .9rem; }
+.lobby-chip{
+  display:inline-block; font-size:.75rem; padding:.2rem .5rem;
+  border-radius:999px; background: rgba(56,189,248,.12); color: rgb(2,132,199);
+  border: 1px solid rgba(56,189,248,.35);
+}
+.lobby-name{ margin:.35rem 0 .15rem; font-size:1rem; }
+.lobby-meta-row{ font-size:.9rem; color: rgb(var(--muted)); }
+
+.aside-card{
+  position: sticky; top: 6rem;
+  padding: 1rem; display:flex; flex-direction:column; gap:.75rem;
+}
+
+/* ========== FAQ ========== */
+.faq-grid{
+  display:grid; grid-template-columns: 1fr 2fr; gap: 1.25rem; align-items:start;
+}
+.faq-intro h3{ margin:0; }
+.faq-intro p{ margin:.25rem 0 0; }
+.faq-cards{
+  display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 1rem;
+}
+.qa-card{ padding: 1rem; }
+
+/* Responsive */
+@media (max-width: 1000px){
+  .features-grid{ grid-template-columns: 1fr 1fr; }
+  .trending-list{ grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 800px){
+  .features-grid{ grid-template-columns: 1fr; }
+  .trending-grid{ grid-template-columns: 1fr; }
+  .trending-list{ grid-template-columns: 1fr; }
+  .faq-grid{ grid-template-columns: 1fr; }
+  .faq-cards{ grid-template-columns: 1fr; }
+}
+
+
 /* Mobile tighten */
 @media (max-width: 900px){
   .hero-title{ font-size: clamp(1.9rem, 5.5vw, 2.4rem); }
