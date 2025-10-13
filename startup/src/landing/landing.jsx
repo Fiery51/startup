@@ -1,14 +1,45 @@
 import React from 'react';
 import '../styles.css';
+import { BrowserRouter, NavLink, Routes, Route} from 'react-router-dom';
+import {Login} from '../login/login'
+
 
 
 export function Landing() {
   return (
-    <main>
-      <div id="landing-HeroSection">
-            <h2>Welcome to Kynectra</h2>
-            <p>The best place to connect, and find new friends!</p>
+    <main className="main--landing">  {/* temporary class so we don't fight your global main flex yet */}
+      <section id="landing-HeroSection">
+        <div className="hero-left">
+          <span className="hero-eyebrow">Safe, campus-friendly activities</span>
+          <h1 className="hero-title">
+            Meet new people, <span className="hero-accent">by doing things</span>.
+          </h1>
+          <p className="hero-sub">
+            Join or host small activities—board games, hikes, study sessions, so friendships happen naturally.
+          </p>
+
+          <div className="hero-cta">
+            <NavLink className="btn btn-primary" to="login">Join a lobby</NavLink>
+            <NavLink className="btn" to="login">How it works</NavLink>
+          </div>
+
+          <ul className="hero-bullets">
+            <li>Community-first</li>
+            <li>Small groups</li>
+            <li>Local only</li>
+          </ul>
         </div>
+
+        <aside className="hero-right card hero-card">
+          <small className="muted">Trending near you</small>
+          <div className="lobby card lobby--preview">
+            <div className="lobby-meta">Outdoors • Today 7:30 PM</div>
+            <h3 className="lobby-title">Sunset Hike @ Y-Mountain</h3>
+            <div className="lobby-meta">6/10 • Provo, UT</div>
+            <button className="btn lobby-view">View</button>
+          </div>
+        </aside>
+      </section>
     </main>
   );
 }
