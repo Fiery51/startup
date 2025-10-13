@@ -9,7 +9,7 @@ import {Login} from '../login/login'
 export function Landing() {
   return (
     <main className="main--landing">  {/* temporary class so we don't fight your global main flex yet */}
-      <section id="landing-HeroSection">
+      <section id="landing-HeroSection" className="container-fluid">
         <div className="hero-left">
           <span className="hero-eyebrow">Safe, campus-friendly activities</span>
           <h1 className="hero-title">
@@ -20,9 +20,10 @@ export function Landing() {
           </p>
 
           <div className="hero-cta">
-            <NavLink className="btn btn-primary" to="login">Join a lobby</NavLink>
-            <NavLink className="btn" to="login">How it works</NavLink>
+            <NavLink className="kbtn kbtn-primary" to="/lobbyinfo">Join a lobby</NavLink>
+            <NavLink className="kbtn" to="/dashboard">How it works</NavLink>
           </div>
+
 
           <ul className="hero-bullets">
             <li>Community-first</li>
@@ -37,7 +38,7 @@ export function Landing() {
             <div className="lobby-meta">Outdoors • Today 7:30 PM</div>
             <h3 className="lobby-title">Sunset Hike @ Y-Mountain</h3>
             <div className="lobby-meta">6/10 • Provo, UT</div>
-            <button className="btn lobby-view">View</button>
+            <button className="kbtn lobby-view" type="button">View</button>
           </div>
         </aside>
       </section>
