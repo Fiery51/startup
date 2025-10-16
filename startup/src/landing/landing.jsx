@@ -55,13 +55,10 @@ function HeroSection(){
         </div>
 
         <aside className="hero-right card hero-card">
-          <small className="muted">Trending near you</small>
-          <div className="lobby card lobby--preview">
-            <div className="lobby-meta">Outdoors • Today 7:30 PM</div>
-            <h3 className="lobby-title">Sunset Hike @ Y-Mountain</h3>
-            <div className="lobby-meta">6/10 • Provo, UT</div>
-            <button className="kbtn lobby-view" type="button">View</button>
-          </div>
+          <LobbyCard l={{ id: 1, name: 'Sunset Hike @ Y-Mountain', tag: 'Outdoors', people: 6, max: 10, time: 'Today 7:30 PM', location: 'Provo, UT' }} />
+          <LobbyCard l={{ id: 2, name: 'Board Games & Boba', tag: 'Casual', people: 3, max: 6, time: 'Fri 8:00 PM', location: 'Riv. Commons' }} />
+          <LobbyCard l={{ id: 3, name: 'Pick-up Basketball', tag: 'Sports', people: 9, max: 12, time: 'Sat 10:00 AM', location: 'RB Courts' }} />
+          <LobbyCard l={{ id: 4, name: 'Study Session – CS260', tag: 'Study', people: 4, max: 8, time: 'Sun 3:00 PM', location: 'HBLL' }} />
         </aside>
       </section>
   )

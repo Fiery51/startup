@@ -81,39 +81,35 @@
 }
 
 /* Hero right preview card + halo */
-.hero-right{
+.hero-right {
   position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr); /* 2 columns */
+  gap: 1rem; /* space between cards */
 }
+
 .hero-right .hero-card {
   padding: 1.25rem 1.5rem;
   max-width: 440px;
   justify-self: start;
 }
-.hero-right::after{
-  content:'';
-  position:absolute;
-  inset:-50px;
-  z-index:-1;
+
+/* existing halo effect */
+.hero-right::after {
+  content: '';
+  position: absolute;
+  inset: -50px;
+  z-index: -1;
   filter: blur(36px);
-  opacity:.45;
-  background: radial-gradient(600px 300px at 20% 10%,
-              rgba(56,189,248,.45), rgba(56,189,248,0));
-  pointer-events:none;
+  opacity: .45;
+  background: radial-gradient(
+    600px 300px at 20% 10%,
+    rgba(56,189,248,.45),
+    rgba(56,189,248,0)
+  );
+  pointer-events: none;
 }
 
-/* Lobby preview chip inside hero card */
-.lobby{
-  padding: 14px;
-  border-radius: 16px;
-}
-.lobby--preview{
-  background: #3b97e0;
-  color: white;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.15);
-}
-.lobby-meta{ opacity:.9; font-size:.9rem; }
-.lobby-title{ margin:.4rem 0 .25rem; font-weight:800; font-size:1.05rem; color:white; }
-.lobby-view{ margin-top:.6rem; }
 
 /* =========================================================
    FEATURES
@@ -146,7 +142,7 @@
   display:grid;
   grid-template-columns: 2fr 1fr;
   gap: 1.25rem;
-  align-items: start;
+  align-items: stretch; /* let row height be driven by the tallest column */
 }
 .trending-header h3{ margin:0; }
 .trending-header p{ margin:.25rem 0 1rem; }
@@ -165,10 +161,20 @@
 .lobby-meta-row{ font-size:.9rem; color: rgb(var(--muted)); }
 
 .aside-card{
-  position: sticky; top: 6rem;
+  /* remove sticky behavior */
+  position: static; /* was: sticky */
+  top: auto;
+
+  /* keep your existing visuals */
   padding: 1rem; display:flex; flex-direction:column; gap:.75rem;
   border-radius: 20px;
   box-shadow: 0 1px 0 rgba(0,0,0,.04), 0 8px 30px rgba(0,0,0,.05);
+
+  /* center vertically within the single grid row */
+  align-self: center;
+
+  /* optional: make it fill the right column width */
+  justify-self: stretch; /* or 'start' if you want it left-aligned */
 }
 
 /* =========================================================
@@ -180,13 +186,14 @@
 .faq-intro h3{ margin:0; }
 .faq-intro p{ margin:.25rem 0 0; }
 .faq-cards{
-  display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 1rem;
-}
-.qa-card{ padding: 1rem; border-radius: 18px; }
+  display: flex;
+  flex-direction: column;
+ }
+.qa-card{margin-bottom: 1.5rem; padding: 1rem; border-radius: 18px; }
 
 /* =========================================================
    RESPONSIVE
-   ========================================================= */
+   ========================================================= */ 
 @media (max-width: 1000px){
   .features-grid{ grid-template-columns: 1fr 1fr; }
   .trending-list{ grid-template-columns: 1fr 1fr; }
