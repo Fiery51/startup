@@ -1,100 +1,115 @@
 # CS 260 Notes
 
-[My startup - Simon](https://simon.cs260.click)
-
-## Helpful links
-
-- [Course instruction](https://github.com/webprogramming260)
-- [Canvas](https://byu.instructure.com)
-- [MDN](https://developer.mozilla.org)
-
 ## AWS
 
-My IP address is: 54.81.96.130
-Launching my AMI I initially put it on a private subnet. Even though it had a public IP address and the security group was right, I wasn't able to connect to it.
+Name of my app: https://kynectra.net/
+Subdirectories: simon.kynectra.net, startup.kynectra.net
 
-## Caddy
+## Linux Commands
 
-No problems worked just like it said in the [instruction](https://github.com/webprogramming260/.github/blob/main/profile/webServers/https/https.md).
+chmod: change file permissions
+
+pwd: print working directory
+
+cd: change directory
+
+ls: list files in a directory
+
+vim, nano: text editors
+
+mkdir: make a new directory
+
+mv: move or rename files
+
+rm: remove files
+
+man: show manual for a command
+
+ssh: connect to a remote server (secure shell)
+
+ps: show running processes
+
+wget: download files from the internet
+
+sudo: run a command as the superuser
+
+## DNS and Networking
+
+A DNS A record maps a domain name to an IP address.
+
+A record cannot point to another A record (it must point to an IP).
+
+CNAME records point to another domain name.
+
+### Example:
+
+Top-level domain (TLD): .com
+
+Root domain: kynectra.com
+
+Subdomain: simon.skynectra.com
+
+Port 443 = HTTPS
+
+Port 80 = HTTP
+
+Port 22 = SSH
+
+HTTPS requires a web certificate for encryption.
 
 ## HTML
 
-This was easy. I was careful to use the correct structural elements such as header, footer, main, nav, and form. The links between the three views work great using the `a` element.
-
-The part I didn't like was the duplication of the header and footer code. This is messy, but it will get cleaned up when I get to React.
+Normal HTML stuff, you got header tags, link tags, etc. etc. Syntax for different things: img src="pathToImageHere" class="nameOfClassHere" alt="SomethingReplacingItHere" 
 
 ## CSS
 
-This took a couple hours to get it how I wanted. It was important to make it responsive and Bootstrap helped with that. It looks great on all kinds of screen sizes.
+To style a class use ".". To style an ID use "#". To use grid do the whole "display: grid;" and then use either "grid-template-columns" or "grid-template-rows" with fractions of space after to define stuff, can also use fixed sizes. 
 
-Bootstrap seems a bit like magic. It styles things nicely, but is very opinionated. You either do, or you do not. There doesn't seem to be much in between.
-
-I did like the navbar it made it super easy to build a responsive header.
-
-```html
-      <nav class="navbar navbar-expand-lg bg-body-tertiary">
-        <div class="container-fluid">
-          <a class="navbar-brand">
-            <img src="logo.svg" width="30" height="30" class="d-inline-block align-top" alt="" />
-            Calmer
-          </a>
-          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent">
-            <span class="navbar-toggler-icon"></span>
-          </button>
-          <div class="collapse navbar-collapse" id="navbarSupportedContent">
-            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-              <li class="nav-item">
-                <a class="nav-link active" href="play.html">Play</a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link" href="about.html">About</a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link" href="index.html">Logout</a>
-              </li>
-            </ul>
-          </div>
-        </div>
-      </nav>
-    </header>
-```
-
-I also used SVG to make the icon and logo for the app. This turned out to be a piece of cake.
-
-```html
-<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
-  <rect width="100" height="100" fill="#0066aa" rx="10" ry="10" />
-  <text x="50%" y="50%" dominant-baseline="central" text-anchor="middle" font-size="72" font-family="Arial" fill="white">C</text>
-</svg>
-```
 
 ## React Part 1: Routing
+React uses components to build the frontend.
 
-Setting up Vite and React was pretty simple. I had a bit of trouble because of conflicting CSS. This isn't as straight forward as you would find with Svelte or Vue, but I made it work in the end. If there was a ton of CSS it would be a real problem. It sure was nice to have the code structured in a more usable way.
+Use JSX for combining HTML and JS.
+
+Routing with react-router-dom (e.g. <BrowserRouter>, <Route>, <Link>).
+
+Used mainly for frontend display — making things look nice.
+
+Can use props to pass data into components.
 
 ## React Part 2: Reactivity
 
-This was a lot of fun to see it all come together. I had to keep remembering to use React state instead of just manipulating the DOM directly.
+const add = (a, b) => a + b;
 
-Handling the toggling of the checkboxes was particularly interesting.
+Objects:
+const person = { name: "Alex", age: 20 };
+- You can add new properties: person.height = 180; (itll automatically add in the field)
 
-```jsx
-<div className="input-group sound-button-container">
-  {calmSoundTypes.map((sound, index) => (
-    <div key={index} className="form-check form-switch">
-      <input
-        className="form-check-input"
-        type="checkbox"
-        value={sound}
-        id={sound}
-        onChange={() => togglePlay(sound)}
-        checked={selectedSounds.includes(sound)}
-      ></input>
-      <label className="form-check-label" htmlFor={sound}>
-        {sound}
-      </label>
-    </div>
-  ))}
-</div>
-```
-# First Edit Section
+const nums = [1, 2, 3];
+nums.map(n => console.log(n));
+(this'll automatically loop through and print out everything)
+
+Syntax Examples
+if (x > 5) { ... }
+else { ... }
+for (let i = 0; i < 5; i++) { ... }
+while (x < 10) { ... }
+switch (num) {
+  case 1: ...
+}
+
+
+Use useState() to store values that change.
+
+Use useEffect() for side effects like fetching or logging.
+
+Syntax Example:
+const [count, setCount] = useState(0);
+
+function handleClick() {
+  setCount(count + 1);
+  console.log("Simulated API call, new count:", count + 1);
+}
+
+JSON Example:
+{ "animal": "crow", "fish": "salmon" }
