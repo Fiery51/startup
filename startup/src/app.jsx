@@ -29,12 +29,14 @@ function AppShell() {
         <nav>
           <NavLink className="nav-link" to="/">Home</NavLink>
 
-          {/* show full nav only when authed */}
           {authed && (
             <>
               <NavLink className="nav-link" to="/dashboard">Dashboard</NavLink>
-              <NavLink className="nav-link" to="/lobbyinfo">Lobby</NavLink>
-              <NavLink className="nav-link" to="/profileskeleton">Profile</NavLink>
+              {/* remove the plain /lobbyinfo link, since it needs an :id */}
+              {/* link to the logged-in user's profile */}
+              <NavLink className="nav-link" to={`/profileskeleton/${encodeURIComponent(userName)}`}>
+                My Profile
+              </NavLink>
             </>
           )}
 
@@ -51,7 +53,7 @@ function AppShell() {
         <Route path='/' element={<Landing />} />
         <Route path='/dashboard' element={<RequireAuth authed={authed}><Dashboard /></RequireAuth>} />
         <Route path='/lobbyinfo/:id' element={<RequireAuth authed={authed}><LobbyInfo /></RequireAuth>} />
-        <Route path='/profileskeleton' element={<RequireAuth authed={authed}><ProfileSkeleton /></RequireAuth>} />
+        <Route path='/profileskeleton/:userName' element={<RequireAuth authed={authed}><ProfileSkeleton /></RequireAuth>} />
         <Route path='/login' element={<Login onLogin={handleLogin} />} />
       </Routes>
 
