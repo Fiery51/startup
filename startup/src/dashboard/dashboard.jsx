@@ -179,7 +179,7 @@ export function Dashboard() {
               key={d.id}
               l={d}
               onDelete={() => handleDelete(d.id)}
-              onJoin={joinLobby}   // ✅ card will call onJoin(d.id) then navigate
+              onJoin={joinLobby}
             />
           ))
         )}
