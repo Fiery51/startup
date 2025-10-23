@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import '../styles.css';
 import { LobbyCard } from '../components/lobbyCard';
 
-import {fakeFetchLobbies, LOBBIES} from './lobbyData';
+import {fakeFetchLobbies, LOBBIES} from '../mockApi/lobbyData';
 
 
 
