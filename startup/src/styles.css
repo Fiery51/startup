@@ -81,7 +81,12 @@ footer{
 
 /* ========== OTHER PAGES (shared building blocks) ========== */
 #LobbyContainer{
-  display:flex; flex-wrap:wrap; gap:.5%; padding:2.5%;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(220px, 1fr));
+  gap: 2rem 1rem;
+  grid-auto-rows: auto;   /* rows grow to fit card height */
+  align-items: start; 
+  padding: 2rem 5rem;
 }
 .lobby{
   margin-top:3%; margin-inline:1%;

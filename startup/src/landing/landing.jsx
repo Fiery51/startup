@@ -3,6 +3,7 @@ import '../styles.css';
 import './landing.css';
 import { BrowserRouter, NavLink, Routes, Route} from 'react-router-dom';
 import {Login} from '../login/login'
+import { LobbyCard } from '../components/lobbyCard';
 
 
 //EXAMPLE CARD STUFF:
@@ -15,17 +16,6 @@ const LOBBIES = [
   { id: 6, name: 'Study Session – CS235',    tag: 'Study',    people: 4, max: 8,  time: 'Tue 3:00 PM',   location: 'TNRB' },
 ];
 
-function LobbyCard({l}) {
-  return (
-    <div className="card lobby-card">
-      <div className="lobby-chip">{l.tag}</div>
-      <h4 className="lobby-name">{l.name}</h4>
-      <div className="lobby-meta-row">{l.people}/{l.max} • {l.time}</div>
-      <div className="lobby-meta-row">{l.location}</div>
-      <button className="kbtn" type="button" style={{marginTop:'.5rem'}}>Join lobby</button>
-    </div>
-  );
-}
 
 //SECTION 1 - Hero section thing
 

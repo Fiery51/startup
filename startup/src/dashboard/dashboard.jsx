@@ -1,62 +1,45 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import '../styles.css';
+import { LobbyCard } from '../components/lobbyCard';
+
+import {fakeFetchLobbies, LOBBIES} from './lobbyData';
+
 
 
 export function Dashboard() {
+  const [all, setAll] = useState([]);
+  const [tag, setTag] = useState('All');
+
+  //Grab the data on loading straight away
+  useEffect(() =>{
+    fakeFetchLobbies().then(setAll);
+  }, []);
+
+  //alright we've gotten the data, now which ones do we actually show according to whatever that filter is set to
+  const visible = useMemo(() => {
+    //If the tag is equal to all just immediatly return, no need to filter through here
+    if(tag === 'All') return all;
+    //if we get here, filter through and return the portions of data that have the tag thats the same as the filter value here
+    return all.filter(d => d.tag === tag);
+  }, [all, tag])
+
+
   return (
     <main>
       <div>
-            <h2>Open Lobbys</h2>
-            <select name="Filter" id="Filter">
-                <option value="Filter One">Filter One</option>
-                <option value="Filter Two">Filter Two</option>
-                <option value="Filter Three">Filter Three</option>
-                <option value="Filter Four">Filter Four</option>
+            <h2>Open Lobbies</h2>
+            <select value={tag} onChange={e => setTag(e.target.value)} name="Filter" id="Filter">
+                <option value="All">All</option>
+                <option value="Outdoors">Outdoors</option>
+                <option value="Casual">Casual</option>
+                <option value="Sports">Sports</option>
+                <option value="Study">Study</option>
             </select>
         </div>
         <div id="LobbyContainer">
-            <div className="lobby">
-                <h3>Lobby 1</h3>
-                <div>Information Here</div>
-                <div>More Information here</div>
-                <div>Even more info here</div>
-                <button>Join</button>
-            </div>
-            <div className="lobby">
-                <h3>Lobby 2</h3>
-                <div>Information Here</div>
-                <div>More Information here</div>
-                <div>Even more info here</div>
-                <button>Join</button>
-            </div>
-            <div className="lobby">
-                <h3>Lobby 3</h3>
-                <div>Information Here</div>
-                <div>More Information here</div>
-                <div>Even more info here</div>
-                <button>Join</button>
-            </div>
-            <div className="lobby">
-                <h3>Lobby 4</h3>
-                <div>Information Here</div>
-                <div>More Information here</div>
-                <div>Even more info here</div>
-                <button>Join</button>
-            </div>
-            <div className="lobby">
-                <h3>Lobby 5</h3>
-                <div>Information Here</div>
-                <div>More Information here</div>
-                <div>Even more info here</div>
-                <button>Join</button>
-            </div>
-            <div className="lobby">
-                <h3>Lobby 6</h3>
-                <div>Information Here</div>
-                <div>More Information here</div>
-                <div>Even more info here</div>
-                <button>Join</button>
-            </div>
+            {visible.length === 0 ? <p>No lobbies match that filter.</p> : (
+              visible.map(d => <LobbyCard key={d.id} l={d} />)
+            )}
         </div>
     </main>
   );
