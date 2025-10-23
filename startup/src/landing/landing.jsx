@@ -32,8 +32,8 @@ function HeroSection(){
           </p>
 
           <div className="hero-cta">
-            <NavLink className="kbtn kbtn-primary" to="/lobbyinfo">Join a lobby</NavLink>
-            <NavLink className="kbtn" to="/dashboard">How it works</NavLink>
+            <NavLink className="kbtn kbtn-primary" to="/login">Join a lobby</NavLink>
+            <NavLink className="kbtn" to="/login">How it works</NavLink>
           </div>
 
 
