@@ -106,16 +106,16 @@ For this deliverable I did the following. I checked the box `[x]` and added a de
 
 For this deliverable I did the following. I checked the box `[x]` and added a description for things I completed.
 
-- [X] **Bundled using Vite** - I did not complete this part of the deliverable.
-- [X] **Components** - I did not complete this part of the deliverable.
-- [X] **Router** - I did not complete this part of the deliverable.
+- [X] **Bundled using Vite** - 
+- [X] **Components** - 
+- [X] **Router** - 
 
 ## 🚀 React part 2: Reactivity deliverable
 
 For this deliverable I did the following. I checked the box `[x]` and added a description for things I completed.
 
-- [ ] **All functionality implemented or mocked out** - I did not complete this part of the deliverable.
-- [ ] **Hooks** - I did not complete this part of the deliverable.
+- [X] **All functionality implemented or mocked out** - like 99% of the actual functionality relies on a working database and users... I was able to implement a "pretend" backend using WSX (what a nightmare)
+- [X] **Hooks** - 
 
 ## 🚀 Service deliverable
 
