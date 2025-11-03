@@ -14,6 +14,7 @@ export function Dashboard() {
     location: '',
     people: 0,
   });
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const userName = localStorage.getItem('userName') || '';
@@ -61,7 +62,10 @@ export function Dashboard() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Failed to create lobby');
       setAll(prev => [...prev, data]);
+
+      // Reset fields & close modal
       setForm(f => ({ ...f, name: '', time: '', location: '' }));
+      setIsCreateModalOpen(false);
     } catch (e) {
       alert(e.message);
     }
@@ -82,7 +86,6 @@ export function Dashboard() {
     }
   }
 
-  // ✅ Join lobby (used by LobbyCard → then navigate inside the card)
   async function joinLobby(id) {
     const res = await fetch(`/api/lobbies/${id}/members`, {
       method: 'POST',
@@ -103,72 +106,106 @@ export function Dashboard() {
 
   return (
     <main>
-      <div>
-        <h2>Open Lobbies</h2>
-        <select
-          value={tag}
-          onChange={e => setTag(e.target.value)}
-          name="Filter"
-          id="Filter"
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h2>Open Lobbies</h2>
+          <select
+            value={tag}
+            onChange={e => setTag(e.target.value)}
+            name="Filter"
+            id="Filter"
+          >
+            <option value="All">All</option>
+            <option value="Outdoors">Outdoors</option>
+            <option value="Casual">Casual</option>
+            <option value="Sports">Sports</option>
+            <option value="Study">Study</option>
+          </select>
+        </div>
+
+        {/* Button that triggers the modal */}
+        <button
+          type="button"
+          onClick={() => setIsCreateModalOpen(true)}
         >
-          <option value="All">All</option>
-          <option value="Outdoors">Outdoors</option>
-          <option value="Casual">Casual</option>
-          <option value="Sports">Sports</option>
-          <option value="Study">Study</option>
-        </select>
+          + Create Lobby
+        </button>
       </div>
 
-      {/* Quick add form */}
-      <form
-        onSubmit={handleAdd}
-        style={{ margin: '1rem 0', display: 'grid', gap: '.5rem', maxWidth: 520 }}
-      >
-        <input
-          required
-          placeholder="Name"
-          value={form.name}
-          onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-        />
-        <div style={{ display: 'flex', gap: '.5rem' }}>
-          <select
-            value={form.tag}
-            onChange={e => setForm(f => ({ ...f, tag: e.target.value }))}
+      {/* Modal for create lobby */}
+      {isCreateModalOpen && (
+        <div
+          className="modal-backdrop"
+          onClick={() => setIsCreateModalOpen(false)}
+        >
+          <div
+            className="modal"
+            onClick={e => e.stopPropagation()} // prevent closing when clicking inside
           >
-            <option>Outdoors</option>
-            <option>Casual</option>
-            <option>Sports</option>
-            <option>Study</option>
-          </select>
-          <input
-            type="number"
-            min="1"
-            placeholder="Max"
-            value={form.max}
-            onChange={e => setForm(f => ({ ...f, max: e.target.value }))}
-          />
-          <input
-            type="number"
-            min="0"
-            placeholder="People"
-            value={form.people}
-            onChange={e => setForm(f => ({ ...f, people: e.target.value }))}
-          />
+            <h3>Create a New Lobby</h3>
+            <form
+              onSubmit={handleAdd}
+              style={{ marginTop: '1rem', display: 'grid', gap: '.5rem', maxWidth: 520 }}
+            >
+              <input
+                required
+                placeholder="Name"
+                value={form.name}
+                onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+              />
+              <div style={{ display: 'flex', gap: '.5rem' }}>
+                <select
+                  value={form.tag}
+                  onChange={e => setForm(f => ({ ...f, tag: e.target.value }))}
+                >
+                  <option>Outdoors</option>
+                  <option>Casual</option>
+                  <option>Sports</option>
+                  <option>Study</option>
+                </select>
+                <input
+                  type="number"
+                  min="1"
+                  placeholder="Max"
+                  value={form.max}
+                  onChange={e => setForm(f => ({ ...f, max: e.target.value }))}
+                />
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="People"
+                  value={form.people}
+                  onChange={e => setForm(f => ({ ...f, people: e.target.value }))}
+                />
+              </div>
+              <input
+                required
+                placeholder="Time (e.g., Fri 8:00 PM)"
+                value={form.time}
+                onChange={e => setForm(f => ({ ...f, time: e.target.value }))}
+              />
+              <input
+                required
+                placeholder="Location"
+                value={form.location}
+                onChange={e => setForm(f => ({ ...f, location: e.target.value }))}
+              />
+
+              <div style={{ display: 'flex', gap: '.5rem', justifyContent: 'flex-end', marginTop: '.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsCreateModalOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button type="submit">
+                  Add Lobby
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
-        <input
-          required
-          placeholder="Time (e.g., Fri 8:00 PM)"
-          value={form.time}
-          onChange={e => setForm(f => ({ ...f, time: e.target.value }))}
-        />
-        <input
-          required
-          placeholder="Location"
-          value={form.location}
-          onChange={e => setForm(f => ({ ...f, location: e.target.value }))}
-        />
-        <button type="submit">Add Lobby</button>
-      </form>
+      )}
 
       <div id="LobbyContainer">
         {visible.length === 0 ? (
