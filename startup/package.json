@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "dev": "vite",
+    "dev": "concurrently \"npm run backend\" \"npm run frontend\"",
+    "frontend": "vite",
+    "backend": "npm run start --prefix service",
     "build": "vite build",
     "preview": "vite preview"
   },
@@ -12,7 +14,7 @@
   "license": "ISC",
   "description": "",
   "devDependencies": {
-    "msw": "^2.11.6",
+    "concurrently": "^9.1.0",
     "vite": "^7.1.9"
   },
   "dependencies": {
@@ -21,10 +23,5 @@
     "react-bootstrap": "^2.10.10",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.9.4"
-  },
-  "msw": {
-    "workerDirectory": [
-      "public"
-    ]
   }
 }

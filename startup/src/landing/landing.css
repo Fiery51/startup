@@ -11,27 +11,6 @@
   padding: 2rem 1rem 3rem;
 }
 
-/* ---- Buttons ---- */
-.kbtn{
-  border: 1px solid rgba(0,0,0,.1);
-  border-radius: 14px;
-  padding: .6rem .9rem;
-  font-weight: 700;
-  background: white;
-  color: rgb(var(--text));
-  text-decoration: none;
-  display:inline-flex; align-items:center; justify-content:center;
-}
-.kbtn:hover{ background: rgba(0,0,0,.04); }
-.kbtn-primary{
-  background: rgb(var(--brand));
-  color: white;
-  border-color: transparent;
-}
-.kbtn-primary:hover{ filter: brightness(.98); }
-.kbtn:visited { color: rgb(var(--text)); }
-.kbtn.kbtn-primary:visited { color: #fff; }
-
 /* =========================================================
    HERO
    ========================================================= */

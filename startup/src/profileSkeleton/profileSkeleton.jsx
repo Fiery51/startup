@@ -16,7 +16,7 @@ export function ProfileSkeleton() {
         const text = await res.text();
         let data;
         try { data = JSON.parse(text); } catch {
-          throw new Error('Server returned non-JSON (is MSW started?)');
+          throw new Error('Unexpected response from server');
         }
         if (!res.ok) throw new Error(data.error || 'Failed to load profile');
         setProfile(data);
