@@ -1,5 +1,6 @@
 const express = require('express');
 const path = require('path');
+const jwt = require('jsonwebtoken');
 
 const app = express();
 const port = process.argv.length > 2 ? process.argv[2] : 4000;
@@ -8,7 +9,7 @@ const port = process.argv.length > 2 ? process.argv[2] : 4000;
 app.use(express.json());
 app.use(express.static('public'));
 
-// ========== In-memory "DB" (no seed data) ==========
+// ========== In-memory ==========
 
 // Users: [{ id, userName, password }]
 let users = [];
@@ -25,6 +26,9 @@ let lobbyChat = {};
 // Profiles: { [userName]: { ...profileFields } }
 let profiles = {};
 
+// User memberships: { [userName]: Set<lobbyId> }
+const userMemberships = {};
+
 // ----------------- Helpers -----------------
 function findUser(userName) {
   return users.find(u => u.userName === userName);
@@ -39,8 +43,13 @@ function validateLobby(body) {
   if (typeof body.max !== 'number' || Number.isNaN(body.max) || body.max <= 0) {
     return 'max must be a positive number';
   }
-  if (body.people !== undefined && (typeof body.people !== 'number' || Number.isNaN(body.people) || body.people < 0)) {
-    return 'people must be a non-negative number';
+  if (body.people !== undefined) {
+    if (typeof body.people !== 'number' || Number.isNaN(body.people) || body.people < 0) {
+      return 'people must be a non-negative number';
+    }
+    if (body.people > body.max) {
+      return 'people cannot exceed max';
+    }
   }
   return null;
 }
@@ -49,9 +58,49 @@ function getLobbyById(id) {
   return lobbies.find(l => String(l.id) === String(id));
 }
 
+function addMembership(userName, lobbyId) {
+  const id = String(lobbyId);
+  if (!userMemberships[userName]) {
+    userMemberships[userName] = new Set();
+  }
+  userMemberships[userName].add(id);
+}
+
+function removeMembership(userName, lobbyId) {
+  const id = String(lobbyId);
+  const set = userMemberships[userName];
+  if (set) {
+    set.delete(id);
+    if (set.size === 0) {
+      delete userMemberships[userName];
+    }
+  }
+}
+
+function removeLobbyFromAllMemberships(lobbyId) {
+  const id = String(lobbyId);
+  Object.keys(userMemberships).forEach(user => {
+    removeMembership(user, id);
+  });
+}
+
+function getUserLobbyIds(userName) {
+  const set = userMemberships[userName];
+  if (!set) return [];
+  return Array.from(set);
+}
+
+function syncLobbyCount(lobbyId) {
+  const id = String(lobbyId);
+  const lobby = getLobbyById(id);
+  if (lobby) {
+    const list = lobbyMembers[id] || [];
+    lobby.people = list.length;
+  }
+}
+
 // ===================== AUTH / USERS =======================
 
-// (optional) list users – mostly for debugging
 app.get('/api/users', (req, res) => {
   res.json(users.map(u => ({ id: u.id, userName: u.userName })));
 });
@@ -78,19 +127,37 @@ app.post('/api/login', (req, res) => {
   if (!user || user.password !== password) {
     return res.status(401).json({ error: 'Invalid credentials' });
   }
-  // client stores userName in localStorage; we just return user info
-  res.json({ id: user.id, userName: user.userName });
+
+  // make the java web token
+  const token = jwt.sign(
+    { id: user.id, userName: user.userName },   
+    process.env.JWT_SECRET || 'likeASecretKeyOrSomethinIdkMan',
+    { expiresIn: '1h' }                         
+  );
+
+  // Set cookie with token
+  res.cookie('token', token, {
+    httpOnly: true,
+    secure: true, 
+    maxAge: 3600000,    // 1 hour
+    sameSite: 'strict',
+  });
+
+  res.json({ message: 'Logged in :0' });
 });
+
 
 // ===================== LOBBIES ============================
 
 // list lobbies
 app.get('/api/lobbies', (req, res) => {
+  lobbies.forEach(l => syncLobbyCount(l.id));
   res.json(lobbies);
 });
 
 // get single lobby
 app.get('/api/lobbies/:id', (req, res) => {
+  syncLobbyCount(req.params.id);
   const lobby = getLobbyById(req.params.id);
   if (!lobby) return res.status(404).json({ error: 'Not found' });
   res.json(lobby);
@@ -105,7 +172,7 @@ app.post('/api/lobbies', (req, res) => {
     time: raw.time ?? '',
     location: raw.location ?? '',
     max: Number(raw.max),
-    people: raw.people === undefined || raw.people === '' ? 0 : Number(raw.people),
+    people: 0,
   };
 
   const err = validateLobby(body);
@@ -118,6 +185,8 @@ app.post('/api/lobbies', (req, res) => {
   // seed helpers maps
   if (!lobbyMembers[id]) lobbyMembers[id] = [];
   if (!lobbyChat[id]) lobbyChat[id] = [];
+
+  syncLobbyCount(id);
 
   res.status(201).json(lobby);
 });
@@ -132,7 +201,7 @@ app.put('/api/lobbies/:id', (req, res) => {
     time: (raw.time ?? '').toString().trim(),
     location: (raw.location ?? '').toString().trim(),
     max: Number(raw.max),
-    people: raw.people === undefined || raw.people === '' ? 0 : Number(raw.people),
+    people: 0,
   };
 
   const err = validateLobby(body);
@@ -141,8 +210,14 @@ app.put('/api/lobbies/:id', (req, res) => {
   const index = lobbies.findIndex(l => String(l.id) === String(id));
   if (index === -1) return res.status(404).json({ error: 'Not found' });
 
-  lobbies[index] = { id: Number(id), ...body };
-  res.json(lobbies[index]);
+  const members = lobbyMembers[id] || [];
+  if (body.max < members.length) {
+    return res.status(400).json({ error: 'max cannot be less than current member count' });
+  }
+
+  const updated = { id: Number(id), ...body, people: members.length };
+  lobbies[index] = updated;
+  res.json(updated);
 });
 
 // partial update lobby
@@ -151,12 +226,18 @@ app.patch('/api/lobbies/:id', (req, res) => {
   const patch = { ...(req.body || {}) };
 
   if (patch.max !== undefined) patch.max = Number(patch.max);
-  if (patch.people !== undefined) patch.people = Number(patch.people);
+  if (patch.people !== undefined) delete patch.people;
 
   const index = lobbies.findIndex(l => String(l.id) === String(id));
   if (index === -1) return res.status(404).json({ error: 'Not found' });
 
+  const members = lobbyMembers[id] || [];
   const merged = { ...lobbies[index], ...patch, id: Number(id) };
+  if (merged.max < members.length) {
+    return res.status(400).json({ error: 'max cannot be less than current member count' });
+  }
+  merged.people = members.length;
+
   const err = validateLobby(merged);
   if (err) return res.status(400).json({ error: err });
 
@@ -173,6 +254,7 @@ app.delete('/api/lobbies/:id', (req, res) => {
   lobbies.splice(index, 1);
   delete lobbyMembers[id];
   delete lobbyChat[id];
+  removeLobbyFromAllMemberships(id);
 
   res.status(204).end();
 });
@@ -192,14 +274,24 @@ app.post('/api/lobbies/:id/members', (req, res) => {
   const name = (body.userName || '').toString().trim();
   if (!name) return res.status(400).json({ error: 'Missing userName' });
 
-  const list = lobbyMembers[id] || [];
-  if (!list.includes(name)) list.push(name);
-  lobbyMembers[id] = list;
-
   const lobby = getLobbyById(id);
-  if (lobby) {
-    lobby.people = (lobby.people || 0) + 1;
+  if (!lobby) return res.status(404).json({ error: 'Lobby not found' });
+
+  if (!lobbyMembers[id]) lobbyMembers[id] = [];
+  const list = lobbyMembers[id];
+
+  if (list.includes(name)) {
+    return res.status(200).json(list);
   }
+
+  if (list.length >= lobby.max) {
+    return res.status(409).json({ error: 'Lobby is full' });
+  }
+
+  list.push(name);
+  lobbyMembers[id] = list;
+  addMembership(name, id);
+  syncLobbyCount(id);
 
   res.status(201).json(list);
 });
@@ -211,17 +303,34 @@ app.delete('/api/lobbies/:id/members', (req, res) => {
   const name = (body.userName || '').toString().trim();
   if (!name) return res.status(400).json({ error: 'Missing userName' });
 
+  const lobby = getLobbyById(id);
+  if (!lobby) return res.status(404).json({ error: 'Lobby not found' });
+
   const list = lobbyMembers[id] || [];
   const idx = list.indexOf(name);
   if (idx >= 0) list.splice(idx, 1);
   lobbyMembers[id] = list;
 
-  const lobby = getLobbyById(id);
-  if (lobby) {
-    lobby.people = Math.max(0, (lobby.people || 0) - 1);
-  }
+  removeMembership(name, id);
+  syncLobbyCount(id);
 
   res.status(204).end();
+});
+
+// list lobbies a user has joined
+app.get('/api/users/:userName/lobbies', (req, res) => {
+  const userName = (req.params.userName || '').toString().trim();
+  if (!userName) return res.status(400).json({ error: 'Missing userName' });
+
+  const ids = getUserLobbyIds(userName);
+  const joined = ids
+    .map(id => {
+      syncLobbyCount(id);
+      return getLobbyById(id);
+    })
+    .filter(Boolean);
+
+  res.json(joined);
 });
 
 // ================ LOBBY CHAT ===============================
@@ -249,8 +358,6 @@ app.post('/api/lobbies/:id/chat', (req, res) => {
 });
 
 // =================== PROFILES ==============================
-// NOTE: since this is a simple in-memory backend, we pass the
-// userName as a query param: /api/profile?userName=foo
 
 app.get('/api/profile', (req, res) => {
   const userName = (req.query.userName || '').toString().trim();
@@ -287,7 +394,6 @@ app.put('/api/profile', (req, res) => {
   res.json(merged);
 });
 
-// Optional: public profile endpoint (no seed data; uses saved profiles)
 app.get('/api/publicProfile/:userName', (req, res) => {
   const name = String(req.params.userName || '').toLowerCase();
   const profile = Object.values(profiles).find(

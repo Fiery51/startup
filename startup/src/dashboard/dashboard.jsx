@@ -1,41 +1,80 @@
 // src/dashboard/dashboard.jsx
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import '../styles.css';
 import { LobbyCard } from '../components/lobbyCard';
 
+const createEmptyLobbyForm = () => ({
+  name: '',
+  tag: 'Casual',
+  max: 10,
+  time: '',
+  location: '',
+});
+
 export function Dashboard() {
   const [all, setAll] = useState([]);
+  const [joined, setJoined] = useState([]);
   const [tag, setTag] = useState('All');
-  const [form, setForm] = useState({
-    name: '',
-    tag: 'Casual',
-    max: 10,
-    time: '',
-    location: '',
-    people: 0,
-  });
+  const [form, setForm] = useState(() => createEmptyLobbyForm());
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const userName = localStorage.getItem('userName') || '';
+  const navigate = useNavigate();
 
-  // Load lobbies on mount
+  const fetchData = useCallback(async () => {
+    const [lobbyRes, joinedRes] = await Promise.all([
+      fetch('/api/lobbies'),
+      fetch(`/api/users/${encodeURIComponent(userName)}/lobbies`),
+    ]);
+
+    const lobbyJson = await lobbyRes.json().catch(() => {
+      throw new Error('Failed to parse lobbies response');
+    });
+    if (!lobbyRes.ok) {
+      throw new Error(lobbyJson?.error || 'Failed to load lobbies');
+    }
+
+    const joinedJson = await joinedRes.json().catch(() => {
+      throw new Error('Failed to parse joined lobbies response');
+    });
+    if (!joinedRes.ok) {
+      throw new Error(joinedJson?.error || 'Failed to load joined lobbies');
+    }
+
+    return {
+      lobbies: Array.isArray(lobbyJson) ? lobbyJson : [],
+      joined: Array.isArray(joinedJson) ? joinedJson : [],
+    };
+  }, [userName]);
+
+  const refreshData = useCallback(async () => {
+    const data = await fetchData();
+    setAll(data.lobbies);
+    setJoined(data.joined);
+    setError(null);
+  }, [fetchData]);
+
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
     (async () => {
       try {
-        const res = await fetch('/api/lobbies');
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Failed to load lobbies');
-        if (!cancelled) setAll(data);
-      } catch (e) {
-        if (!cancelled) setError(e.message);
+        const data = await fetchData();
+        if (!cancelled) {
+          setAll(data.lobbies);
+          setJoined(data.joined);
+          setError(null);
+        }
+      } catch (err) {
+        if (!cancelled) setError(err.message);
       } finally {
         if (!cancelled) setLoading(false);
       }
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [fetchData]);
 
   // Lock body scroll when the modal is open
   useEffect(() => {
@@ -49,15 +88,18 @@ export function Dashboard() {
     };
   }, [isCreateModalOpen]);
 
-  // Filter visible by tag
+  const joinedIds = useMemo(() => new Set(joined.map(l => String(l.id))), [joined]);
+
   const visible = useMemo(() => {
-    if (tag === 'All') return all;
-    return all.filter(d => d.tag === tag);
+    const normalized = all.map(l => ({ ...l, id: Number(l.id) }));
+    if (tag === 'All') return normalized;
+    return normalized.filter(item => item.tag === tag);
   }, [all, tag]);
 
-  // Create lobby
-  async function handleAdd(e) {
-    e.preventDefault();
+  const isFormValid = Boolean(form.name && form.time && form.location && form.max);
+
+  async function handleAdd(event) {
+    event.preventDefault();
     try {
       const res = await fetch('/api/lobbies', {
         method: 'POST',
@@ -68,40 +110,29 @@ export function Dashboard() {
           max: Number(form.max),
           time: form.time,
           location: form.location,
-          people: Number(form.people) || 0,
         }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Failed to create lobby');
-      setAll(prev => [...prev, data]);
 
-      // Reset fields & close modal
-      setForm({
-        name: '',
-        tag: 'Casual',
-        max: 10,
-        time: '',
-        location: '',
-        people: 0,
-      });
+      setForm(createEmptyLobbyForm());
       setIsCreateModalOpen(false);
-    } catch (e) {
-      alert(e.message);
+      await refreshData();
+    } catch (err) {
+      alert(err.message);
     }
   }
 
-  // Delete lobby
   async function handleDelete(id) {
     try {
       const res = await fetch(`/api/lobbies/${id}`, { method: 'DELETE' });
-      if (res.status === 204) {
-        setAll(prev => prev.filter(x => x.id !== id));
-      } else {
+      if (res.status !== 204) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'Failed to delete');
+        throw new Error(data.error || 'Failed to delete lobby');
       }
-    } catch (e) {
-      alert(e.message);
+      await refreshData();
+    } catch (err) {
+      alert(err.message);
     }
   }
 
@@ -112,17 +143,28 @@ export function Dashboard() {
       body: JSON.stringify({ userName }),
     });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || 'Failed to join');
-
-    // Refresh counts after joining
-    const r = await fetch('/api/lobbies');
-    const updated = await r.json().catch(() => []);
-    setAll(updated);
+    if (res.status === 409) {
+      throw new Error(data.error || 'Lobby is full');
+    }
+    if (!res.ok && res.status !== 200) {
+      throw new Error(data.error || 'Failed to join lobby');
+    }
+    await refreshData();
+    return true;
   }
 
-  const isFormValid =
-    Boolean(form.name && form.time && form.location) &&
-    Number(form.max) > 0;
+  async function leaveLobby(id) {
+    const res = await fetch(`/api/lobbies/${id}/members`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userName }),
+    });
+    if (res.status !== 204) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || 'Failed to leave lobby');
+    }
+    await refreshData();
+  }
 
   if (loading) return <main><p>Loading lobbies...</p></main>;
   if (error) return <main><p>Error: {error}</p></main>;
@@ -131,7 +173,10 @@ export function Dashboard() {
     <main className="dashboard">
       <div className="dashboard-header">
         <div className="dashboard-heading">
-          <h2 className="dashboard-title">Open Lobbies</h2>
+          <div>
+            <h2 className="dashboard-title">Open lobbies</h2>
+            <p className="muted">Join something new or host your own.</p>
+          </div>
           <div className="dashboard-filter">
             <span className="field-label">Filter by tag</span>
             <select
@@ -149,18 +194,24 @@ export function Dashboard() {
             </select>
           </div>
         </div>
-
-        {/* Button that triggers the modal */}
-        <button
-          type="button"
-          className="kbtn kbtn-primary create-lobby-btn"
-          onClick={() => setIsCreateModalOpen(true)}
-        >
-          + Create Lobby
-        </button>
+        <div className="dashboard-actions">
+          <button
+            type="button"
+            className="kbtn"
+            onClick={() => navigate('/my-lobbies')}
+          >
+            My lobbies
+          </button>
+          <button
+            type="button"
+            className="kbtn kbtn-primary create-lobby-btn"
+            onClick={() => setIsCreateModalOpen(true)}
+          >
+            + Create lobby
+          </button>
+        </div>
       </div>
 
-      {/* Modal for create lobby */}
       {isCreateModalOpen && (
         <div
           className="app-modal-backdrop"
@@ -168,7 +219,7 @@ export function Dashboard() {
         >
           <div
             className="app-modal"
-            onClick={e => e.stopPropagation()} // prevent closing when clicking inside
+            onClick={event => event.stopPropagation()}
           >
             <button
               type="button"
@@ -178,7 +229,7 @@ export function Dashboard() {
             >
               X
             </button>
-            <h3>Create a New Lobby</h3>
+            <h3>Create a new lobby</h3>
             <p className="modal-subtitle">Host a meetup by filling out the details below.</p>
             <form
               onSubmit={handleAdd}
@@ -222,18 +273,6 @@ export function Dashboard() {
                     onChange={e => setForm(f => ({ ...f, max: e.target.value }))}
                   />
                 </div>
-                <div className="field">
-                  <label className="field-label" htmlFor="lobby-people">Currently joined</label>
-                  <input
-                    id="lobby-people"
-                    className="field-input"
-                    type="number"
-                    min="0"
-                    placeholder="0"
-                    value={form.people}
-                    onChange={e => setForm(f => ({ ...f, people: e.target.value }))}
-                  />
-                </div>
               </div>
               <div className="field">
                 <label className="field-label" htmlFor="lobby-time">Time</label>
@@ -271,7 +310,7 @@ export function Dashboard() {
                   className="kbtn kbtn-primary"
                   disabled={!isFormValid}
                 >
-                  Add Lobby
+                  Add lobby
                 </button>
               </div>
             </form>
@@ -283,12 +322,15 @@ export function Dashboard() {
         {visible.length === 0 ? (
           <p className="dashboard-empty">No lobbies match that filter yet.</p>
         ) : (
-          visible.map(d => (
+          visible.map(lobby => (
             <LobbyCard
-              key={d.id}
-              l={d}
-              onDelete={() => handleDelete(d.id)}
+              key={lobby.id}
+              l={lobby}
+              isJoined={joinedIds.has(String(lobby.id))}
+              isFull={Number(lobby.people) >= Number(lobby.max)}
               onJoin={joinLobby}
+              onLeave={leaveLobby}
+              onDelete={() => handleDelete(lobby.id)}
             />
           ))
         )}

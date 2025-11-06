@@ -1,6 +1,6 @@
 // src/profileSkeleton/profileSkeleton.jsx
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import '../styles.css';
 
 export function ProfileSkeleton() {
@@ -8,6 +8,7 @@ export function ProfileSkeleton() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const currentUser = (localStorage.getItem('userName') || '').toLowerCase();
 
   useEffect(() => {
     async function loadProfile() {
@@ -34,37 +35,64 @@ export function ProfileSkeleton() {
   if (error) return <main><p>Error: {error}</p></main>;
   if (!profile) return <main><p>No profile found.</p></main>;
 
+  const isOwnProfile = currentUser && profile.userName?.toLowerCase() === currentUser;
+  const interests = Array.isArray(profile.interests) ? profile.interests : [];
+  const topActivities = Array.isArray(profile.topActivities) ? profile.topActivities : [];
+
   return (
-    <main>
-      <div className="BioContainer">
-        <div className="bio">
-          <h1>{profile.userName}</h1>
-          <p>{profile.bio}</p>
+    <main className="profile-view">
+      <div className="profile-view__card card">
+        <div className="profile-view__header">
+          <div className="profile-view__avatar">
+            <img
+              src={profile.avatarUrl || 'DefaultProfileImg.png'}
+              alt={`${profile.userName}'s profile`}
+            />
+          </div>
+          <div>
+            <h1>{profile.userName}</h1>
+            <p className="muted">Member since {profile.memberSince}</p>
+          </div>
+          {isOwnProfile && (
+            <Link className="kbtn kbtn-primary" to="/profile/edit">
+              Edit profile
+            </Link>
+          )}
         </div>
 
-        <ul className="interests">
-          {profile.interests.map((i, idx) => (
-            <li key={idx}>{i}</li>
-          ))}
-        </ul>
+        <div className="profile-view__body">
+          <section>
+            <h3>Bio</h3>
+            <p>{profile.bio || 'No bio yet.'}</p>
+          </section>
 
-        <p>Member since: {profile.memberSince}</p>
+          <section>
+            <h3>Interests</h3>
+            {interests.length === 0 ? (
+              <p className="muted">No interests shared yet.</p>
+            ) : (
+              <ul className="profile-list">
+                {interests.map((interest, idx) => (
+                  <li key={idx}>{interest}</li>
+                ))}
+              </ul>
+            )}
+          </section>
 
-        <div>
-          <h3>Top Activities</h3>
-          <ol>
-            {profile.topActivities.map((a, idx) => (
-              <li key={idx}>{a}</li>
-            ))}
-          </ol>
+          <section>
+            <h3>Top activities</h3>
+            {topActivities.length === 0 ? (
+              <p className="muted">Nothing listed yet.</p>
+            ) : (
+              <ol className="profile-list">
+                {topActivities.map((activity, idx) => (
+                  <li key={idx}>{activity}</li>
+                ))}
+              </ol>
+            )}
+          </section>
         </div>
       </div>
-
-      <img
-        src={profile.avatarUrl || 'DefaultProfileImg.png'}
-        alt={`${profile.userName}'s profile`}
-        className="profileImg"
-      />
     </main>
   );
 }

@@ -9,6 +9,8 @@ import { LobbyInfo } from './lobbyInfo/lobbyInfo';
 import { ProfileSkeleton } from './profileSkeleton/profileSkeleton';
 import { Login } from './login/login';
 import { Landing } from './landing/landing';
+import { ProfileEditor } from './profile/profileEditor';
+import { MyLobbies } from './dashboard/myLobbies';
 
 function AppShell() {
   const [userName, setUserName] = React.useState(() => localStorage.getItem('userName') || '');
@@ -25,35 +27,32 @@ function AppShell() {
 
   return (
     <div>
-      <header className="container-fluid">
-        <nav>
-          <NavLink className="nav-link" to="/">Home</NavLink>
-
-          {authed && (
-            <>
+      <header className="app-header">
+        <div className="app-header__inner container-fluid">
+          <div className="app-nav-left">
+            <NavLink className="app-brand" to="/">Kynectra</NavLink>
+            <NavLink className="nav-link" to="/" end>Home</NavLink>
+            {authed && (
               <NavLink className="nav-link" to="/dashboard">Dashboard</NavLink>
-              {/* remove the plain /lobbyinfo link, since it needs an :id */}
-              {/* link to the logged-in user's profile */}
-              <NavLink className="nav-link" to={`/profileskeleton/${encodeURIComponent(userName)}`}>
-                My Profile
-              </NavLink>
-            </>
-          )}
-
-          {/* show Login when not authed; show Logout when authed */}
-          {!authed ? (
-            <NavLink className="nav-link" to="/login">Login</NavLink>
-          ) : (
-            <LogoutLink onLogout={handleLogout} userName={userName} />
-          )}
-        </nav>
+            )}
+          </div>
+          <div className="app-nav-right">
+            {!authed ? (
+              <NavLink className="kbtn kbtn-primary" to="/login">Login</NavLink>
+            ) : (
+              <ProfileMenu userName={userName} onLogout={handleLogout} />
+            )}
+          </div>
+        </div>
       </header>
 
       <Routes>
         <Route path='/' element={<Landing />} />
         <Route path='/dashboard' element={<RequireAuth authed={authed}><Dashboard /></RequireAuth>} />
         <Route path='/lobbyinfo/:id' element={<RequireAuth authed={authed}><LobbyInfo /></RequireAuth>} />
-        <Route path='/profileskeleton/:userName' element={<RequireAuth authed={authed}><ProfileSkeleton /></RequireAuth>} />
+        <Route path='/profile/:userName' element={<RequireAuth authed={authed}><ProfileSkeleton /></RequireAuth>} />
+        <Route path='/profile/edit' element={<RequireAuth authed={authed}><ProfileEditor /></RequireAuth>} />
+        <Route path='/my-lobbies' element={<RequireAuth authed={authed}><MyLobbies /></RequireAuth>} />
         <Route path='/login' element={<Login onLogin={handleLogin} />} />
       </Routes>
 
@@ -67,20 +66,59 @@ function AppShell() {
   );
 }
 
-function LogoutLink({ onLogout, userName }) {
+function ProfileMenu({ userName, onLogout }) {
   const navigate = useNavigate();
+  const [open, setOpen] = React.useState(false);
+  const menuRef = React.useRef(null);
+  const initials = userName ? userName[0].toUpperCase() : '?';
+
+  React.useEffect(() => {
+    function handleClick(event) {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  function go(path) {
+    setOpen(false);
+    navigate(path);
+  }
+
   return (
-    <button
-      className="nav-link"
-      style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
-      onClick={() => { onLogout(); navigate('/'); }}
-      title={`Logout ${userName}`}
-    >
-      Logout
-    </button>
+    <div className="profile-menu" ref={menuRef}>
+      <button
+        type="button"
+        className="avatar-btn"
+        onClick={() => setOpen(o => !o)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label="Account menu"
+      >
+        {initials}
+      </button>
+      {open && (
+        <div className="profile-menu__dropdown" role="menu">
+          <button type="button" onClick={() => go(`/profile/${encodeURIComponent(userName)}`)}>My profile</button>
+          <button type="button" onClick={() => go('/profile/edit')}>Edit profile</button>
+          <button type="button" onClick={() => go('/my-lobbies')}>My lobbies</button>
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              onLogout();
+              navigate('/');
+            }}
+          >
+            Logout
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
-
 
 function RequireAuth({ authed, children }) {
   const navigate = useNavigate();
@@ -97,3 +135,4 @@ export default function App() {
     </BrowserRouter>
   );
 }
+
