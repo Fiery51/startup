@@ -121,12 +121,12 @@ For this deliverable I did the following. I checked the box `[x]` and added a de
 
 For this deliverable I did the following. I checked the box `[x]` and added a description for things I completed.
 
-- [ ] **Node.js/Express HTTP service** - I did not complete this part of the deliverable.
-- [ ] **Static middleware for frontend** - I did not complete this part of the deliverable.
-- [ ] **Calls to third party endpoints** - I did not complete this part of the deliverable.
-- [ ] **Backend service endpoints** - I did not complete this part of the deliverable.
-- [ ] **Frontend calls service endpoints** - I did not complete this part of the deliverable.
-- [ ] **Supports registration, login, logout, and restricted endpoint** - I did not complete this part of the deliverable.
+- [X] **Node.js/Express HTTP service** - all the backend stuff should be fully working! Lot of it was able to be copy pasted over from MSW stuff I had. 
+- [X] **Static middleware for frontend** - not too much to say, i got this. Uses the public directory. 
+- [X] **Calls to third party endpoints** - HEY! Soooo i used a joke api for each lobby when its created. I'll make a comment but whats your email? For google auth i need peoples gmails to allow them into the app because it'll be in a "dev" state. If that counts for API i can replace the joke and add in the google stuff, since i've done it before with a different project pretty fast. 
+- [X] **Backend service endpoints** - Are all exposed to people if they're logged in so you can fill in all the skeletons of everything. 
+- [X] **Frontend calls service endpoints** - frontend is able to call the backend. Has to call it a lot to be able to fetch all the data stored in memory for now to populate all the lobbies and profiles and such. 
+- [X] **Supports registration, login, logout, and restricted endpoint** - yeah, create account, logout, cookies, shouldn't be able to just /dashboard everything. 
 
 
 ## 🚀 DB deliverable
