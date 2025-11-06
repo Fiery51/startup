@@ -2,7 +2,7 @@
 import React from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './styles.css';
-import { BrowserRouter, NavLink, Route, Routes, useNavigate } from 'react-router-dom';
+import { BrowserRouter, NavLink, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 
 import { Dashboard } from './dashboard/dashboard';
 import { LobbyInfo } from './lobbyInfo/lobbyInfo';
@@ -30,8 +30,10 @@ function AppShell() {
       <header className="app-header">
         <div className="app-header__inner container-fluid">
           <div className="app-nav-left">
-            <NavLink className="app-brand" to="/">Kynectra</NavLink>
-            <NavLink className="nav-link" to="/" end>Home</NavLink>
+            <NavLink className="app-brand" to={authed ? '/dashboard' : '/'}>Kynectra</NavLink>
+            {!authed && (
+              <NavLink className="nav-link" to="/" end>Home</NavLink>
+            )}
             {authed && (
               <NavLink className="nav-link" to="/dashboard">Dashboard</NavLink>
             )}
@@ -47,7 +49,7 @@ function AppShell() {
       </header>
 
       <Routes>
-        <Route path='/' element={<Landing />} />
+        <Route path='/' element={authed ? <Navigate to="/dashboard" replace /> : <Landing />} />
         <Route path='/dashboard' element={<RequireAuth authed={authed}><Dashboard /></RequireAuth>} />
         <Route path='/lobbyinfo/:id' element={<RequireAuth authed={authed}><LobbyInfo /></RequireAuth>} />
         <Route path='/profile/:userName' element={<RequireAuth authed={authed}><ProfileSkeleton /></RequireAuth>} />
