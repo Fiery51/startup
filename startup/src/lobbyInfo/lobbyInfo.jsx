@@ -166,6 +166,13 @@ export function LobbyInfo() {
           )}
         </section>
 
+        {lobby.joke && (
+          <section className="lobby-view__section">
+            <h2>Lobby joke</h2>
+            <p className="muted">{lobby.joke}</p>
+          </section>
+        )}
+
         <section className="lobby-view__section">
           <h2>Location</h2>
           <p>{lobby.location}</p>

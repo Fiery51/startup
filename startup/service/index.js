@@ -53,6 +53,18 @@ let profiles = {};
 // User memberships: { [userName]: Set<lobbyId> }
 const userMemberships = {};
 
+let fetchImplCache = null;
+async function getFetch() {
+  if (typeof global.fetch === 'function') {
+    return global.fetch.bind(global);
+  }
+  if (!fetchImplCache) {
+    const mod = await import('node-fetch');
+    fetchImplCache = mod.default;
+  }
+  return fetchImplCache;
+}
+
 // ----------------- Helpers -----------------
 function findUser(userName) {
   return users.find(u => u.userName === userName);
@@ -123,7 +135,39 @@ function syncLobbyCount(lobbyId) {
   }
 }
 
-// Session helpers lifted from simon-service (adapted for JWT instead of UUID tokens)
+function ensureProfile(userName) {
+  const name = (userName || '').toString().trim();
+  if (!name) return null;
+
+  if (!profiles[name]) {
+    profiles[name] = {
+      userName: name,
+      bio: '',
+      interests: [],
+      memberSince: new Date().toISOString().slice(0, 10),
+      topActivities: [],
+      avatarUrl: 'DefaultProfileImg.png',
+    };
+  }
+
+  return profiles[name];
+}
+
+async function fetchLobbyJoke() {
+  try {
+    const fetchFn = await getFetch();
+    const res = await fetchFn('https://official-joke-api.appspot.com/random_joke', { cache: 'no-store' });
+    if (!res?.ok) throw new Error(`Unexpected status ${res?.status}`);
+    const data = await res.json();
+    if (data?.setup && data?.punchline) {
+      return `${data.setup} ${data.punchline}`;
+    }
+  } catch (err) {
+    console.warn('Failed to fetch lobby joke', err);
+  }
+  return null;
+}
+
 function setAuthCookie(res, authToken) {
   res.cookie(authCookieName, authToken, {
     maxAge: 1000 * 60 * 60 * 24 * 365,
@@ -166,6 +210,7 @@ app.post('/api/users', (req, res) => {
   const id = users.length ? Math.max(...users.map(u => u.id)) + 1 : 1;
   const user = { id, userName, password };
   users.push(user);
+  ensureProfile(userName);
   res.status(201).json({ id, userName });
   
 });
@@ -215,7 +260,7 @@ app.get('/api/lobbies/:id', (req, res) => {
 });
 
 // create lobby
-app.post('/api/lobbies', (req, res) => {
+app.post('/api/lobbies', async (req, res) => {
   const raw = req.body || {};
   const body = {
     name: raw.name ?? '',
@@ -231,9 +276,11 @@ app.post('/api/lobbies', (req, res) => {
 
   const id = lobbies.length ? Math.max(...lobbies.map(l => Number(l.id))) + 1 : 1;
   const lobby = { id, ...body };
+  const joke = await fetchLobbyJoke();
+  if (joke) lobby.joke = joke;
   lobbies.push(lobby);
 
-  // seed helpers maps
+
   if (!lobbyMembers[id]) lobbyMembers[id] = [];
   if (!lobbyChat[id]) lobbyChat[id] = [];
 
@@ -242,7 +289,7 @@ app.post('/api/lobbies', (req, res) => {
   res.status(201).json(lobby);
 });
 
-// full update lobby
+//full update lobby
 app.put('/api/lobbies/:id', (req, res) => {
   const id = req.params.id;
   const raw = req.body || {};
@@ -414,31 +461,15 @@ app.get('/api/profile', requireAuth, (req, res) => {
   const userName = (req.query.userName || req.user?.userName || '').toString().trim();
   if (!userName) return res.status(401).json({ error: 'Not logged in' });
 
-  if (!profiles[userName]) {
-    profiles[userName] = {
-      userName,
-      bio: '',
-      interests: [],
-      memberSince: new Date().toISOString().slice(0, 10),
-      topActivities: [],
-      avatarUrl: 'DefaultProfileImg.png',
-    };
-  }
-  res.json(profiles[userName]);
+  const profile = ensureProfile(userName);
+  res.json(profile);
 });
 
 app.put('/api/profile', requireAuth, (req, res) => {
   const userName = (req.query.userName || req.user?.userName || '').toString().trim();
   if (!userName) return res.status(401).json({ error: 'Not logged in' });
 
-  const prev = profiles[userName] || {
-    userName,
-    bio: '',
-    interests: [],
-    memberSince: new Date().toISOString().slice(0, 10),
-    topActivities: [],
-    avatarUrl: 'DefaultProfileImg.png',
-  };
+  const prev = ensureProfile(userName);
   const body = req.body || {};
   const merged = { ...prev, ...body, userName };
   profiles[userName] = merged;
@@ -446,11 +477,19 @@ app.put('/api/profile', requireAuth, (req, res) => {
 });
 
 app.get('/api/publicProfile/:userName', (req, res) => {
-  const name = String(req.params.userName || '').toLowerCase();
-  const profile = Object.values(profiles).find(
-    p => (p.userName || '').toLowerCase() === name
+  const rawName = (req.params.userName || '').toString().trim();
+  if (!rawName) return res.status(400).json({ error: 'Missing userName' });
+
+  const lookup = rawName.toLowerCase();
+  const existing = Object.values(profiles).find(
+    p => (p.userName || '').toLowerCase() === lookup
   );
-  if (!profile) return res.status(404).json({ error: 'User not found' });
+  if (existing) return res.json(existing);
+
+  const user = users.find(u => (u.userName || '').toLowerCase() === lookup);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+
+  const profile = ensureProfile(user.userName);
   res.json(profile);
 });
 
