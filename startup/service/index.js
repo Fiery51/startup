@@ -2,17 +2,18 @@ const express = require('express');
 const path = require('path');
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
+const bcrypt = require('bcryptjs');
 
 const app = express();
 const port = process.argv.length > 2 ? process.argv[2] : 4000;
 const authCookieName = 'token';
+app.set('trust proxy', 1);
 
 // ------------ Middleware -------------
 app.use(express.json());
 app.use(express.static('public'));
 app.use(cookieParser());
 
-// Hydrate req.user when a valid auth cookie is present. Mirrors the simon-service pattern
 app.use((req, _res, next) => {
   const token = req.cookies?.[authCookieName];
   if (!token) {
@@ -171,7 +172,7 @@ async function fetchLobbyJoke() {
 function setAuthCookie(res, authToken) {
   res.cookie(authCookieName, authToken, {
     maxAge: 1000 * 60 * 60 * 24 * 365,
-    secure: process.env.NODE_ENV === 'production',
+    secure: true,
     httpOnly: true,
     sameSite: 'strict',
   });
@@ -179,7 +180,7 @@ function setAuthCookie(res, authToken) {
 
 function clearAuthCookie(res) {
   res.clearCookie(authCookieName, {
-    secure: process.env.NODE_ENV === 'production',
+    secure: true,
     httpOnly: true,
     sameSite: 'strict',
   });
@@ -199,7 +200,7 @@ app.get('/api/users', (req, res) => {
 });
 
 // create user
-app.post('/api/users', (req, res) => {
+app.post('/api/users', async (req, res) => {
   const { userName, password } = req.body || {};
   if (!userName || !password) {
     return res.status(400).json({ error: 'Missing fields' });
@@ -207,19 +208,28 @@ app.post('/api/users', (req, res) => {
   if (findUser(userName)) {
     return res.status(409).json({ error: 'User exists' });
   }
-  const id = users.length ? Math.max(...users.map(u => u.id)) + 1 : 1;
-  const user = { id, userName, password };
-  users.push(user);
-  ensureProfile(userName);
-  res.status(201).json({ id, userName });
-  
+  try {
+    const id = users.length ? Math.max(...users.map(u => u.id)) + 1 : 1;
+    const passwordHash = await bcrypt.hash(password, 10);
+    const user = { id, userName, password: passwordHash };
+    users.push(user);
+    ensureProfile(userName);
+    res.status(201).json({ id, userName });
+  } catch (err) {
+    console.error('Failed to create user', err);
+    res.status(500).json({ error: 'Failed to create user' });
+  }
 });
 
 // login
-app.post('/api/login', (req, res) => {
+app.post('/api/login', async (req, res) => {
   const { userName, password } = req.body || {};
   const user = findUser(userName);
-  if (!user || user.password !== password) {
+  if (!user) {
+    return res.status(401).json({ error: 'Invalid credentials' });
+  }
+  const ok = await bcrypt.compare(password || '', user.password || '');
+  if (!ok) {
     return res.status(401).json({ error: 'Invalid credentials' });
   }
 
@@ -230,7 +240,6 @@ app.post('/api/login', (req, res) => {
     { expiresIn: '1h' }                         
   );
 
-  // Set auth cookie using the simon-service helper pattern
   setAuthCookie(res, token);
 
   res.json({ message: 'Logged in :0' });
