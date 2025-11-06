@@ -43,13 +43,14 @@ export function Login({ onLogin }) {
         setMsg(err.error ?? 'Create failed');
         return;
       }
-      localStorage.setItem('userName', username);
-      onLogin?.(username);
-      navigate('/dashboard');
+
+      setMsg('Account created! Please log in.');
+      navigate('/login');
     } catch {
       setMsg('Network error');
     }
   }
+
 
   return (
     <main>

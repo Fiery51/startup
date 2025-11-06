@@ -1,13 +1,37 @@
 const express = require('express');
 const path = require('path');
 const jwt = require('jsonwebtoken');
+const cookieParser = require('cookie-parser');
 
 const app = express();
 const port = process.argv.length > 2 ? process.argv[2] : 4000;
+const authCookieName = 'token';
 
 // ------------ Middleware -------------
 app.use(express.json());
 app.use(express.static('public'));
+app.use(cookieParser());
+
+// Hydrate req.user when a valid auth cookie is present. Mirrors the simon-service pattern
+app.use((req, _res, next) => {
+  const token = req.cookies?.[authCookieName];
+  if (!token) {
+    req.user = null;
+    return next();
+  }
+
+  try {
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET || 'likeASecretKeyOrSomethinIdkMan'
+    );
+    req.user = decoded;
+  } catch (err) {
+    req.user = null;
+  }
+
+  next();
+});
 
 // ========== In-memory ==========
 
@@ -99,6 +123,31 @@ function syncLobbyCount(lobbyId) {
   }
 }
 
+// Session helpers lifted from simon-service (adapted for JWT instead of UUID tokens)
+function setAuthCookie(res, authToken) {
+  res.cookie(authCookieName, authToken, {
+    maxAge: 1000 * 60 * 60 * 24 * 365,
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    sameSite: 'strict',
+  });
+}
+
+function clearAuthCookie(res) {
+  res.clearCookie(authCookieName, {
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    sameSite: 'strict',
+  });
+}
+
+function requireAuth(req, res, next) {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  next();
+}
+
 // ===================== AUTH / USERS =======================
 
 app.get('/api/users', (req, res) => {
@@ -118,6 +167,7 @@ app.post('/api/users', (req, res) => {
   const user = { id, userName, password };
   users.push(user);
   res.status(201).json({ id, userName });
+  
 });
 
 // login
@@ -135,15 +185,16 @@ app.post('/api/login', (req, res) => {
     { expiresIn: '1h' }                         
   );
 
-  // Set cookie with token
-  res.cookie('token', token, {
-    httpOnly: true,
-    secure: true, 
-    maxAge: 3600000,    // 1 hour
-    sameSite: 'strict',
-  });
+  // Set auth cookie using the simon-service helper pattern
+  setAuthCookie(res, token);
 
   res.json({ message: 'Logged in :0' });
+});
+
+// logout
+app.post('/api/logout', (req, res) => {
+  clearAuthCookie(res);
+  res.status(204).end();
 });
 
 
@@ -268,10 +319,10 @@ app.get('/api/lobbies/:id/members', (req, res) => {
 });
 
 // add lobby member
-app.post('/api/lobbies/:id/members', (req, res) => {
+app.post('/api/lobbies/:id/members', requireAuth, (req, res) => {
   const id = String(req.params.id);
   const body = req.body || {};
-  const name = (body.userName || '').toString().trim();
+  const name = (body.userName || req.user?.userName || '').toString().trim();
   if (!name) return res.status(400).json({ error: 'Missing userName' });
 
   const lobby = getLobbyById(id);
@@ -297,10 +348,10 @@ app.post('/api/lobbies/:id/members', (req, res) => {
 });
 
 // remove lobby member
-app.delete('/api/lobbies/:id/members', (req, res) => {
+app.delete('/api/lobbies/:id/members', requireAuth, (req, res) => {
   const id = String(req.params.id);
   const body = req.body || {};
-  const name = (body.userName || '').toString().trim();
+  const name = (body.userName || req.user?.userName || '').toString().trim();
   if (!name) return res.status(400).json({ error: 'Missing userName' });
 
   const lobby = getLobbyById(id);
@@ -359,8 +410,8 @@ app.post('/api/lobbies/:id/chat', (req, res) => {
 
 // =================== PROFILES ==============================
 
-app.get('/api/profile', (req, res) => {
-  const userName = (req.query.userName || '').toString().trim();
+app.get('/api/profile', requireAuth, (req, res) => {
+  const userName = (req.query.userName || req.user?.userName || '').toString().trim();
   if (!userName) return res.status(401).json({ error: 'Not logged in' });
 
   if (!profiles[userName]) {
@@ -376,8 +427,8 @@ app.get('/api/profile', (req, res) => {
   res.json(profiles[userName]);
 });
 
-app.put('/api/profile', (req, res) => {
-  const userName = (req.query.userName || '').toString().trim();
+app.put('/api/profile', requireAuth, (req, res) => {
+  const userName = (req.query.userName || req.user?.userName || '').toString().trim();
   if (!userName) return res.status(401).json({ error: 'Not logged in' });
 
   const prev = profiles[userName] || {
