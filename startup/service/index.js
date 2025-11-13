@@ -1,8 +1,9 @@
-const express = require('express');
+﻿const express = require('express');
 const path = require('path');
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
 const bcrypt = require('bcryptjs');
+const { connectToDatabase } = require('./db');
 
 const app = express();
 const port = process.argv.length > 2 ? process.argv[2] : 4000;
@@ -34,26 +35,6 @@ app.use((req, _res, next) => {
   next();
 });
 
-// ========== In-memory ==========
-
-// Users: [{ id, userName, password }]
-let users = [];
-
-// Lobbies: [{ id, name, tag, people, max, time, location }]
-let lobbies = [];
-
-// Lobby members: { [lobbyId]: [userName, ...] }
-let lobbyMembers = {};
-
-// Lobby chat: { [lobbyId]: [{ user, text, ts }, ...] }
-let lobbyChat = {};
-
-// Profiles: { [userName]: { ...profileFields } }
-let profiles = {};
-
-// User memberships: { [userName]: Set<lobbyId> }
-const userMemberships = {};
-
 let fetchImplCache = null;
 async function getFetch() {
   if (typeof global.fetch === 'function') {
@@ -66,92 +47,78 @@ async function getFetch() {
   return fetchImplCache;
 }
 
-// ----------------- Helpers -----------------
-function findUser(userName) {
-  return users.find(u => u.userName === userName);
+const collections = {
+  users: null,
+  lobbies: null,
+  memberships: null,
+  profiles: null,
+  chats: null,
+};
+
+const normalizeName = (name) => (name || '').toString().trim().toLowerCase();
+
+function parseLobbyNumber(id) {
+  const num = Number(id);
+  if (!Number.isFinite(num)) return null;
+  return num;
 }
 
-function validateLobby(body) {
-  const required = ['name', 'tag', 'max', 'time', 'location'];
-  const missing = required.filter(k =>
-    body[k] === undefined || body[k] === null || body[k] === ''
-  );
-  if (missing.length) return `Missing: ${missing.join(', ')}`;
-  if (typeof body.max !== 'number' || Number.isNaN(body.max) || body.max <= 0) {
-    return 'max must be a positive number';
-  }
-  if (body.people !== undefined) {
-    if (typeof body.people !== 'number' || Number.isNaN(body.people) || body.people < 0) {
-      return 'people must be a non-negative number';
-    }
-    if (body.people > body.max) {
-      return 'people cannot exceed max';
-    }
-  }
-  return null;
+function toLobbyResponse(doc) {
+  if (!doc) return null;
+  return {
+    id: doc.id,
+    name: doc.name,
+    tag: doc.tag,
+    max: doc.max,
+    time: doc.time,
+    location: doc.location,
+    people: doc.people ?? 0,
+    joke: doc.joke,
+  };
 }
 
-function getLobbyById(id) {
-  return lobbies.find(l => String(l.id) === String(id));
+function toProfileResponse(doc) {
+  if (!doc) return null;
+  return {
+    userName: doc.userName,
+    bio: doc.bio || '',
+    interests: Array.isArray(doc.interests) ? doc.interests : [],
+    memberSince: doc.memberSince,
+    topActivities: Array.isArray(doc.topActivities) ? doc.topActivities : [],
+    avatarUrl: doc.avatarUrl || 'DefaultProfileImg.png',
+  };
 }
 
-function addMembership(userName, lobbyId) {
-  const id = String(lobbyId);
-  if (!userMemberships[userName]) {
-    userMemberships[userName] = new Set();
-  }
-  userMemberships[userName].add(id);
+async function findUser(userName) {
+  const normalized = normalizeName(userName);
+  if (!normalized) return null;
+  return collections.users.findOne({ normalizedUserName: normalized });
 }
 
-function removeMembership(userName, lobbyId) {
-  const id = String(lobbyId);
-  const set = userMemberships[userName];
-  if (set) {
-    set.delete(id);
-    if (set.size === 0) {
-      delete userMemberships[userName];
-    }
-  }
+async function ensureProfile(userName) {
+  const trimmed = (userName || '').toString().trim();
+  if (!trimmed) return null;
+  const normalized = normalizeName(trimmed);
+  const existing = await collections.profiles.findOne({ normalizedUserName: normalized });
+  if (existing) return toProfileResponse(existing);
+
+  const fresh = {
+    userName: trimmed,
+    normalizedUserName: normalized,
+    bio: '',
+    interests: [],
+    topActivities: [],
+    avatarUrl: 'DefaultProfileImg.png',
+    memberSince: new Date().toISOString().slice(0, 10),
+  };
+  await collections.profiles.insertOne(fresh);
+  return toProfileResponse(fresh);
 }
 
-function removeLobbyFromAllMemberships(lobbyId) {
-  const id = String(lobbyId);
-  Object.keys(userMemberships).forEach(user => {
-    removeMembership(user, id);
-  });
-}
-
-function getUserLobbyIds(userName) {
-  const set = userMemberships[userName];
-  if (!set) return [];
-  return Array.from(set);
-}
-
-function syncLobbyCount(lobbyId) {
-  const id = String(lobbyId);
-  const lobby = getLobbyById(id);
-  if (lobby) {
-    const list = lobbyMembers[id] || [];
-    lobby.people = list.length;
-  }
-}
-
-function ensureProfile(userName) {
-  const name = (userName || '').toString().trim();
-  if (!name) return null;
-
-  if (!profiles[name]) {
-    profiles[name] = {
-      userName: name,
-      bio: '',
-      interests: [],
-      memberSince: new Date().toISOString().slice(0, 10),
-      topActivities: [],
-      avatarUrl: 'DefaultProfileImg.png',
-    };
-  }
-
-  return profiles[name];
+async function updateLobbyPeopleCount(lobbyId) {
+  const count = await collections.memberships.countDocuments({ lobbyId });
+  await collections.lobbies.updateOne({ _id: lobbyId }, { $set: { people: count } });
+  return count;
 }
 
 async function fetchLobbyJoke() {
@@ -193,38 +160,92 @@ function requireAuth(req, res, next) {
   next();
 }
 
+function validateLobby(body) {
+  const required = ['name', 'tag', 'max', 'time', 'location'];
+  const missing = required.filter(k =>
+    body[k] === undefined || body[k] === null || body[k] === ''
+  );
+  if (missing.length) return `Missing: ${missing.join(', ')}`;
+  if (typeof body.max !== 'number' || Number.isNaN(body.max) || body.max <= 0) {
+    return 'max must be a positive number';
+  }
+  if (body.people !== undefined) {
+    if (typeof body.people !== 'number' || Number.isNaN(body.people) || body.people < 0) {
+      return 'people must be a non-negative number';
+    }
+    if (body.people > body.max) {
+      return 'people cannot exceed max';
+    }
+  }
+  return null;
+}
+
+async function getLobbyByPublicId(idParam) {
+  const numericId = parseLobbyNumber(idParam);
+  if (numericId === null) return null;
+  return collections.lobbies.findOne({ id: numericId });
+}
+
+async function getNextLobbyId() {
+  const [latest] = await collections.lobbies.find({}).sort({ id: -1 }).limit(1).toArray();
+  const lastValue = Number(latest?.id);
+  if (!Number.isFinite(lastValue) || lastValue < 0) {
+    return 1;
+  }
+  return lastValue + 1;
+}
+
+async function listMembers(lobbyId) {
+  const members = await collections.memberships
+    .find({ lobbyId }, { projection: { _id: 0, userName: 1 } })
+    .sort({ joinedAt: 1 })
+    .toArray();
+  return members.map(m => m.userName);
+}
+
 // ===================== AUTH / USERS =======================
 
-app.get('/api/users', (req, res) => {
-  res.json(users.map(u => ({ id: u.id, userName: u.userName })));
+app.get('/api/users', async (_req, res) => {
+  const users = await collections.users
+    .find({}, { projection: { userName: 1 } })
+    .sort({ userName: 1 })
+    .toArray();
+  res.json(users.map(u => ({ id: u._id.toString(), userName: u.userName })));
 });
 
-// create user
 app.post('/api/users', async (req, res) => {
   const { userName, password } = req.body || {};
   if (!userName || !password) {
     return res.status(400).json({ error: 'Missing fields' });
   }
-  if (findUser(userName)) {
+
+  const normalized = normalizeName(userName);
+  const existing = await collections.users.findOne({ normalizedUserName: normalized });
+  if (existing) {
     return res.status(409).json({ error: 'User exists' });
   }
+
   try {
-    const id = users.length ? Math.max(...users.map(u => u.id)) + 1 : 1;
     const passwordHash = await bcrypt.hash(password, 10);
-    const user = { id, userName, password: passwordHash };
-    users.push(user);
-    ensureProfile(userName);
-    res.status(201).json({ id, userName });
+    const doc = {
+      userName: userName.trim(),
+      normalizedUserName: normalized,
+      password: passwordHash,
+      memberSince: new Date().toISOString().slice(0, 10),
+      createdAt: new Date(),
+    };
+    const result = await collections.users.insertOne(doc);
+    await ensureProfile(userName);
+    res.status(201).json({ id: result.insertedId.toString(), userName: doc.userName });
   } catch (err) {
     console.error('Failed to create user', err);
     res.status(500).json({ error: 'Failed to create user' });
   }
 });
 
-// login
 app.post('/api/login', async (req, res) => {
   const { userName, password } = req.body || {};
-  const user = findUser(userName);
+  const user = await findUser(userName);
   if (!user) {
     return res.status(401).json({ error: 'Invalid credentials' });
   }
@@ -233,78 +254,39 @@ app.post('/api/login', async (req, res) => {
     return res.status(401).json({ error: 'Invalid credentials' });
   }
 
-  // make the java web token
   const token = jwt.sign(
-    { id: user.id, userName: user.userName },   
+    { id: user._id.toString(), userName: user.userName },
     process.env.JWT_SECRET || 'likeASecretKeyOrSomethinIdkMan',
-    { expiresIn: '1h' }                         
+    { expiresIn: '1h' }
   );
 
   setAuthCookie(res, token);
-
   res.json({ message: 'Logged in :0' });
 });
 
-// logout
 app.post('/api/logout', (req, res) => {
   clearAuthCookie(res);
   res.status(204).end();
 });
 
-
 // ===================== LOBBIES ============================
 
-// list lobbies
-app.get('/api/lobbies', (req, res) => {
-  lobbies.forEach(l => syncLobbyCount(l.id));
-  res.json(lobbies);
+app.get('/api/lobbies', async (_req, res) => {
+  const lobbies = await collections.lobbies.find({}).sort({ createdAt: -1 }).toArray();
+  res.json(lobbies.map(toLobbyResponse));
 });
 
-// get single lobby
-app.get('/api/lobbies/:id', (req, res) => {
-  syncLobbyCount(req.params.id);
-  const lobby = getLobbyById(req.params.id);
+app.get('/api/lobbies/:id', async (req, res) => {
+  const lobby = await getLobbyByPublicId(req.params.id);
   if (!lobby) return res.status(404).json({ error: 'Not found' });
-  res.json(lobby);
+  res.json(toLobbyResponse(lobby));
 });
 
-// create lobby
 app.post('/api/lobbies', async (req, res) => {
   const raw = req.body || {};
   const body = {
-    name: raw.name ?? '',
-    tag: raw.tag ?? '',
-    time: raw.time ?? '',
-    location: raw.location ?? '',
-    max: Number(raw.max),
-    people: 0,
-  };
-
-  const err = validateLobby(body);
-  if (err) return res.status(400).json({ error: err });
-
-  const id = lobbies.length ? Math.max(...lobbies.map(l => Number(l.id))) + 1 : 1;
-  const lobby = { id, ...body };
-  const joke = await fetchLobbyJoke();
-  if (joke) lobby.joke = joke;
-  lobbies.push(lobby);
-
-
-  if (!lobbyMembers[id]) lobbyMembers[id] = [];
-  if (!lobbyChat[id]) lobbyChat[id] = [];
-
-  syncLobbyCount(id);
-
-  res.status(201).json(lobby);
-});
-
-//full update lobby
-app.put('/api/lobbies/:id', (req, res) => {
-  const id = req.params.id;
-  const raw = req.body || {};
-  const body = {
     name: (raw.name ?? '').toString().trim(),
-    tag: (raw.tag ?? '').toString().trim(),
+    tag: (raw.tag ?? '').toString().trim() || 'Casual',
     time: (raw.time ?? '').toString().trim(),
     location: (raw.location ?? '').toString().trim(),
     max: Number(raw.max),
@@ -314,192 +296,217 @@ app.put('/api/lobbies/:id', (req, res) => {
   const err = validateLobby(body);
   if (err) return res.status(400).json({ error: err });
 
-  const index = lobbies.findIndex(l => String(l.id) === String(id));
-  if (index === -1) return res.status(404).json({ error: 'Not found' });
+  const doc = {
+    ...body,
+    id: await getNextLobbyId(),
+    createdAt: new Date(),
+  };
+  const joke = await fetchLobbyJoke();
+  if (joke) doc.joke = joke;
 
-  const members = lobbyMembers[id] || [];
-  if (body.max < members.length) {
-    return res.status(400).json({ error: 'max cannot be less than current member count' });
-  }
-
-  const updated = { id: Number(id), ...body, people: members.length };
-  lobbies[index] = updated;
-  res.json(updated);
+  const result = await collections.lobbies.insertOne(doc);
+  const inserted = await collections.lobbies.findOne({ _id: result.insertedId });
+  res.status(201).json(toLobbyResponse(inserted));
 });
 
-// partial update lobby
-app.patch('/api/lobbies/:id', (req, res) => {
-  const id = req.params.id;
-  const patch = { ...(req.body || {}) };
-
-  if (patch.max !== undefined) patch.max = Number(patch.max);
-  if (patch.people !== undefined) delete patch.people;
-
-  const index = lobbies.findIndex(l => String(l.id) === String(id));
-  if (index === -1) return res.status(404).json({ error: 'Not found' });
-
-  const members = lobbyMembers[id] || [];
-  const merged = { ...lobbies[index], ...patch, id: Number(id) };
-  if (merged.max < members.length) {
+app.put('/api/lobbies/:id', async (req, res) => {
+  const lobby = await getLobbyByPublicId(req.params.id);
+  if (!lobby) return res.status(404).json({ error: 'Not found' });
+  const raw = req.body || {};
+  const body = {
+    name: (raw.name ?? '').toString().trim(),
+    tag: (raw.tag ?? '').toString().trim(),
+    time: (raw.time ?? '').toString().trim(),
+    location: (raw.location ?? '').toString().trim(),
+    max: Number(raw.max),
+  };
+  const members = await collections.memberships.countDocuments({ lobbyId: lobby._id });
+  const err = validateLobby({ ...body, people: members });
+  if (err) return res.status(400).json({ error: err });
+  if (body.max < members) {
     return res.status(400).json({ error: 'max cannot be less than current member count' });
   }
-  merged.people = members.length;
+  await collections.lobbies.updateOne(
+    { _id: lobby._id },
+    { $set: { ...body, people: members } }
+  );
+  const updated = await collections.lobbies.findOne({ _id: lobby._id });
+  res.json(toLobbyResponse(updated));
+});
 
+app.patch('/api/lobbies/:id', async (req, res) => {
+  const lobby = await getLobbyByPublicId(req.params.id);
+  if (!lobby) return res.status(404).json({ error: 'Not found' });
+  const patch = { ...(req.body || {}) };
+  if (patch.people !== undefined) delete patch.people;
+  if (patch.max !== undefined) patch.max = Number(patch.max);
+  const members = await collections.memberships.countDocuments({ lobbyId: lobby._id });
+  const merged = { ...lobby, ...patch, people: members };
   const err = validateLobby(merged);
   if (err) return res.status(400).json({ error: err });
-
-  lobbies[index] = merged;
-  res.json(merged);
+  await collections.lobbies.updateOne(
+    { _id: lobby._id },
+    { $set: merged }
+  );
+  const updated = await collections.lobbies.findOne({ _id: lobby._id });
+  res.json(toLobbyResponse(updated));
 });
 
-// delete lobby
-app.delete('/api/lobbies/:id', (req, res) => {
-  const id = req.params.id;
-  const index = lobbies.findIndex(l => String(l.id) === String(id));
-  if (index === -1) return res.status(404).json({ error: 'Not found' });
-
-  lobbies.splice(index, 1);
-  delete lobbyMembers[id];
-  delete lobbyChat[id];
-  removeLobbyFromAllMemberships(id);
-
+app.delete('/api/lobbies/:id', async (req, res) => {
+  const lobby = await getLobbyByPublicId(req.params.id);
+  if (!lobby) return res.status(404).json({ error: 'Not found' });
+  await collections.lobbies.deleteOne({ _id: lobby._id });
+  await collections.memberships.deleteMany({ lobbyId: lobby._id });
+  await collections.chats.deleteMany({ lobbyId: lobby._id });
   res.status(204).end();
 });
 
 // ================ LOBBY MEMBERS ============================
 
-// get lobby members
-app.get('/api/lobbies/:id/members', (req, res) => {
-  const id = String(req.params.id);
-  res.json(lobbyMembers[id] || []);
+app.get('/api/lobbies/:id/members', async (req, res) => {
+  const lobby = await getLobbyByPublicId(req.params.id);
+  if (!lobby) return res.status(404).json({ error: 'Lobby not found' });
+  const members = await listMembers(lobby._id);
+  res.json(members);
 });
 
-// add lobby member
-app.post('/api/lobbies/:id/members', requireAuth, (req, res) => {
-  const id = String(req.params.id);
-  const body = req.body || {};
-  const name = (body.userName || req.user?.userName || '').toString().trim();
-  if (!name) return res.status(400).json({ error: 'Missing userName' });
-
-  const lobby = getLobbyById(id);
+app.post('/api/lobbies/:id/members', requireAuth, async (req, res) => {
+  const lobby = await getLobbyByPublicId(req.params.id);
   if (!lobby) return res.status(404).json({ error: 'Lobby not found' });
 
-  if (!lobbyMembers[id]) lobbyMembers[id] = [];
-  const list = lobbyMembers[id];
+  const name = (req.body?.userName || req.user?.userName || '').toString().trim();
+  if (!name) return res.status(400).json({ error: 'Missing userName' });
+  const normalized = normalizeName(name);
 
-  if (list.includes(name)) {
-    return res.status(200).json(list);
+  const existing = await collections.memberships.findOne({ lobbyId: lobby._id, normalizedUserName: normalized });
+  if (existing) {
+    const members = await listMembers(lobby._id);
+    return res.status(200).json(members);
   }
 
-  if (list.length >= lobby.max) {
+  const memberCount = await collections.memberships.countDocuments({ lobbyId: lobby._id });
+  if (memberCount >= lobby.max) {
     return res.status(409).json({ error: 'Lobby is full' });
   }
 
-  list.push(name);
-  lobbyMembers[id] = list;
-  addMembership(name, id);
-  syncLobbyCount(id);
-
-  res.status(201).json(list);
+  await collections.memberships.insertOne({
+    lobbyId: lobby._id,
+    userName: name,
+    normalizedUserName: normalized,
+    joinedAt: new Date(),
+  });
+  await updateLobbyPeopleCount(lobby._id);
+  const members = await listMembers(lobby._id);
+  res.status(201).json(members);
 });
 
-// remove lobby member
-app.delete('/api/lobbies/:id/members', requireAuth, (req, res) => {
-  const id = String(req.params.id);
-  const body = req.body || {};
-  const name = (body.userName || req.user?.userName || '').toString().trim();
-  if (!name) return res.status(400).json({ error: 'Missing userName' });
-
-  const lobby = getLobbyById(id);
+app.delete('/api/lobbies/:id/members', requireAuth, async (req, res) => {
+  const lobby = await getLobbyByPublicId(req.params.id);
   if (!lobby) return res.status(404).json({ error: 'Lobby not found' });
 
-  const list = lobbyMembers[id] || [];
-  const idx = list.indexOf(name);
-  if (idx >= 0) list.splice(idx, 1);
-  lobbyMembers[id] = list;
+  const name = (req.body?.userName || req.user?.userName || '').toString().trim();
+  if (!name) return res.status(400).json({ error: 'Missing userName' });
+  const normalized = normalizeName(name);
 
-  removeMembership(name, id);
-  syncLobbyCount(id);
-
+  await collections.memberships.deleteOne({ lobbyId: lobby._id, normalizedUserName: normalized });
+  await updateLobbyPeopleCount(lobby._id);
   res.status(204).end();
 });
 
-// list lobbies a user has joined
-app.get('/api/users/:userName/lobbies', (req, res) => {
+app.get('/api/users/:userName/lobbies', async (req, res) => {
   const userName = (req.params.userName || '').toString().trim();
   if (!userName) return res.status(400).json({ error: 'Missing userName' });
-
-  const ids = getUserLobbyIds(userName);
-  const joined = ids
-    .map(id => {
-      syncLobbyCount(id);
-      return getLobbyById(id);
-    })
-    .filter(Boolean);
-
-  res.json(joined);
+  const normalized = normalizeName(userName);
+  const membershipDocs = await collections.memberships
+    .find({ normalizedUserName: normalized })
+    .sort({ joinedAt: 1 })
+    .toArray();
+  if (!membershipDocs.length) return res.json([]);
+  const lobbyIds = membershipDocs.map(m => m.lobbyId);
+  const lobbyDocs = await collections.lobbies
+    .find({ _id: { $in: lobbyIds } })
+    .toArray();
+  const map = new Map(lobbyDocs.map(doc => [doc._id.toString(), doc]));
+  const ordered = membershipDocs
+    .map(m => map.get(m.lobbyId.toString()))
+    .filter(Boolean)
+    .map(toLobbyResponse);
+  res.json(ordered);
 });
 
 // ================ LOBBY CHAT ===============================
 
-// get chat log
-app.get('/api/lobbies/:id/chat', (req, res) => {
-  const id = String(req.params.id);
-  res.json(lobbyChat[id] || []);
+app.get('/api/lobbies/:id/chat', async (req, res) => {
+  const lobby = await getLobbyByPublicId(req.params.id);
+  if (!lobby) return res.status(404).json({ error: 'Lobby not found' });
+  const lobbyId = lobby._id;
+  const messages = await collections.chats
+    .find({ lobbyId }, { projection: { _id: 0, user: 1, text: 1, ts: 1 } })
+    .sort({ ts: 1 })
+    .toArray();
+  res.json(messages);
 });
 
-// post chat message
-app.post('/api/lobbies/:id/chat', (req, res) => {
-  const id = String(req.params.id);
+app.post('/api/lobbies/:id/chat', async (req, res) => {
+  const lobby = await getLobbyByPublicId(req.params.id);
+  if (!lobby) return res.status(404).json({ error: 'Lobby not found' });
+  const lobbyId = lobby._id;
   const body = req.body || {};
   const text = (body.text || '').toString().trim();
   const user = (body.userName || 'anon').toString();
   if (!text) return res.status(400).json({ error: 'Empty message' });
-
-  const log = lobbyChat[id] || [];
-  const msg = { user, text, ts: Date.now() };
-  log.push(msg);
-  lobbyChat[id] = log;
-
-  res.status(201).json(msg);
+  const msg = { lobbyId, user, text, ts: Date.now() };
+  await collections.chats.insertOne(msg);
+  res.status(201).json({ user, text, ts: msg.ts });
 });
 
 // =================== PROFILES ==============================
 
-app.get('/api/profile', requireAuth, (req, res) => {
+app.get('/api/profile', requireAuth, async (req, res) => {
   const userName = (req.query.userName || req.user?.userName || '').toString().trim();
   if (!userName) return res.status(401).json({ error: 'Not logged in' });
-
-  const profile = ensureProfile(userName);
+  const profile = await ensureProfile(userName);
   res.json(profile);
 });
 
-app.put('/api/profile', requireAuth, (req, res) => {
+app.put('/api/profile', requireAuth, async (req, res) => {
   const userName = (req.query.userName || req.user?.userName || '').toString().trim();
   if (!userName) return res.status(401).json({ error: 'Not logged in' });
+  const normalized = normalizeName(userName);
+  const existing = await collections.profiles.findOne({ normalizedUserName: normalized });
+  const payload = {
+    bio: req.body?.bio || '',
+    interests: Array.isArray(req.body?.interests) ? req.body.interests : [],
+    topActivities: Array.isArray(req.body?.topActivities) ? req.body.topActivities : [],
+    avatarUrl: req.body?.avatarUrl || 'DefaultProfileImg.png',
+    userName,
+    normalizedUserName: normalized,
+  };
 
-  const prev = ensureProfile(userName);
-  const body = req.body || {};
-  const merged = { ...prev, ...body, userName };
-  profiles[userName] = merged;
-  res.json(merged);
+  const updated = await collections.profiles.findOneAndUpdate(
+    { normalizedUserName: normalized },
+    {
+      $set: {
+        ...payload,
+        memberSince: existing?.memberSince || new Date().toISOString().slice(0, 10),
+      },
+    },
+    { upsert: true, returnDocument: 'after' }
+  );
+  res.json(toProfileResponse(updated.value));
 });
 
-app.get('/api/publicProfile/:userName', (req, res) => {
+app.get('/api/publicProfile/:userName', async (req, res) => {
   const rawName = (req.params.userName || '').toString().trim();
   if (!rawName) return res.status(400).json({ error: 'Missing userName' });
+  const normalized = normalizeName(rawName);
+  const profile = await collections.profiles.findOne({ normalizedUserName: normalized });
+  if (profile) return res.json(toProfileResponse(profile));
 
-  const lookup = rawName.toLowerCase();
-  const existing = Object.values(profiles).find(
-    p => (p.userName || '').toLowerCase() === lookup
-  );
-  if (existing) return res.json(existing);
-
-  const user = users.find(u => (u.userName || '').toLowerCase() === lookup);
+  const user = await collections.users.findOne({ normalizedUserName: normalized });
   if (!user) return res.status(404).json({ error: 'User not found' });
-
-  const profile = ensureProfile(user.userName);
-  res.json(profile);
+  const ensured = await ensureProfile(user.userName);
+  res.json(ensured);
 });
 
 // -------------- SPA fallback ----------------
@@ -508,7 +515,33 @@ app.use((req, res, next) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Start server
-app.listen(port, () => {
-  console.log(`Listening on port ${port}`);
-});
+async function start() {
+  try {
+    const db = await connectToDatabase();
+    collections.users = db.collection('users');
+    collections.lobbies = db.collection('lobbies');
+    collections.memberships = db.collection('memberships');
+    collections.profiles = db.collection('profiles');
+    collections.chats = db.collection('chats');
+
+    await Promise.all([
+      collections.users.createIndex({ normalizedUserName: 1 }, { unique: true }),
+      collections.memberships.createIndex({ lobbyId: 1, normalizedUserName: 1 }, { unique: true }),
+      collections.profiles.createIndex({ normalizedUserName: 1 }, { unique: true }),
+      collections.lobbies.createIndex({ id: 1 }, { unique: true }),
+      collections.lobbies.createIndex({ tag: 1 }),
+      collections.chats.createIndex({ lobbyId: 1, ts: 1 }),
+    ]);
+
+    app.listen(port, () => {
+      console.log(`Listening on port ${port}`);
+    });
+  } catch (err) {
+    console.error('Failed to start server', err);
+    process.exit(1);
+  }
+}
+
+start();
+
+
