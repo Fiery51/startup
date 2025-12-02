@@ -278,8 +278,8 @@ footer{
 .chat-input{ display:flex; gap:.5rem; margin-top:1rem; }
 .chat-input textarea{
   flex:1; min-height:48px; resize:vertical; border-radius:8px;
-  border:1px solid rgba(255,255,255,.3); padding:.5rem .75rem;
-  background:rgba(255,255,255,.1); color:white;
+  border:1px solid rgba(0,0,0,.1); padding:.5rem .75rem;
+  background:#ffffff; color:#000000;
 }
 .chat-input button{ padding:0 .9rem; border-radius:8px; border:1px solid transparent; background:#4bcfff; color:#073042; }
 .chat-input button:hover{ filter:brightness(.95); }

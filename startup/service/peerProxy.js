@@ -3,7 +3,8 @@ const { WebSocketServer, WebSocket } = require('ws');
 let serverRef = null;
 
 function peerProxy(httpServer) {
-  const socketServer = new WebSocketServer({ server: httpServer });
+  // Match the client URL `${protocol}://${host}:${port}/ws`
+  const socketServer = new WebSocketServer({ server: httpServer, path: '/ws' });
   serverRef = socketServer;
 
   socketServer.on('connection', (socket) => {

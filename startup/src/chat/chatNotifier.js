@@ -10,9 +10,9 @@ class ChatEventNotifier {
 
   constructor(lobbyId) {
     this.lobbyId = lobbyId?.toString() || null;
-    const port = window.location.port;
-    const protocol = window.location.protocol === 'http:' ? 'ws' : 'wss';
-    this.socket = new WebSocket(`${protocol}://${window.location.hostname}:${port}/ws`);
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    // Use same host/port as current page; Vite proxy maps /ws to backend in dev
+    this.socket = new WebSocket(`${wsProtocol}://${window.location.host}/ws`);
     this.socket.onopen = () => {
       if (this.lobbyId) this.joinLobby(this.lobbyId);
       this.receiveEvent({ type: ChatEvent.System, payload: { msg: 'connected' } });
@@ -22,7 +22,13 @@ class ChatEventNotifier {
     };
     this.socket.onmessage = async (msg) => {
       try {
-        const evt = JSON.parse(await msg.data.text());
+        let raw = msg.data;
+        if (raw instanceof Blob) {
+          raw = await raw.text();
+        } else if (raw instanceof ArrayBuffer) {
+          raw = new TextDecoder().decode(raw);
+        }
+        const evt = typeof raw === 'string' ? JSON.parse(raw) : raw;
         if (evt?.type === ChatEvent.Chat && evt?.lobbyId?.toString() === this.lobbyId) {
           this.receiveEvent({ type: ChatEvent.Chat, payload: evt.payload });
         }
