@@ -167,6 +167,12 @@ export function LobbyInfo() {
     }
   }
 
+  function formatTimestamp(ts) {
+    const d = new Date(Number(ts));
+    if (!Number.isFinite(d.getTime())) return '';
+    return d.toLocaleString([], { dateStyle: 'short', timeStyle: 'short' });
+  }
+
   if (loading) return <main><p>Loading lobby...</p></main>;
   if (error) return <main><p>Error: {error}</p></main>;
   if (!lobby) return <main><p>Lobby not found.</p></main>;
@@ -175,98 +181,112 @@ export function LobbyInfo() {
 
   return (
     <main className="lobby-view">
-      <div className="lobby-view__card card">
-        <header className="lobby-view__header">
-          <div>
-            <h1>{lobby.name}</h1>
-            <p className="muted">{lobby.location}</p>
-          </div>
-          <div className="lobby-view__meta">
-            <span>{lobby.time}</span>
-            <span>{Math.min(lobby.people, lobby.max)} / {lobby.max} spots</span>
-          </div>
-          <div className="lobby-view__actions">
-            {isMember ? (
-              <button
-                type="button"
-                className="kbtn"
-                onClick={handleLeave}
-                disabled={leaveBusy}
-              >
-                {leaveBusy ? 'Leaving...' : 'Leave lobby'}
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="kbtn kbtn-primary"
-                onClick={handleJoin}
-                disabled={joinBusy || isFull}
-              >
-                {isFull ? 'Lobby full' : joinBusy ? 'Joining...' : 'Join lobby'}
-              </button>
-            )}
-          </div>
-        </header>
+      <div className="lobby-view__grid">
+        <div className="lobby-view__card card lobby-view__card--info">
+          <header className="lobby-view__header">
+            <div>
+              <h1>{lobby.name}</h1>
+              <p className="muted">{lobby.location}</p>
+            </div>
+            <div className="lobby-view__meta">
+              <span>{lobby.time}</span>
+              <span>{Math.min(lobby.people, lobby.max)} / {lobby.max} spots</span>
+            </div>
+            <div className="lobby-view__actions">
+              {isMember ? (
+                <button
+                  type="button"
+                  className="kbtn"
+                  onClick={handleLeave}
+                  disabled={leaveBusy}
+                >
+                  {leaveBusy ? 'Leaving...' : 'Leave lobby'}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="kbtn kbtn-primary"
+                  onClick={handleJoin}
+                  disabled={joinBusy || isFull}
+                >
+                  {isFull ? 'Lobby full' : joinBusy ? 'Joining...' : 'Join lobby'}
+                </button>
+              )}
+            </div>
+          </header>
 
-        <section className="lobby-view__section">
-          <h2>Members</h2>
-          {members.length === 0 ? (
-            <p className="muted">No members yet.</p>
-          ) : (
-            <ul className="lobby-members">
-              {members.map((name) => (
-                <li key={name} className="member">
-                  <span className="avatar-circle" aria-hidden />
-                  <Link to={`/profile/${encodeURIComponent(name)}`}>{name}</Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-
-        {lobby.joke && (
           <section className="lobby-view__section">
-            <h2>Lobby joke</h2>
-            <p className="muted">{lobby.joke}</p>
-          </section>
-        )}
-
-        <section className="lobby-view__section">
-          <h2>Location</h2>
-          <p>{lobby.location}</p>
-          <p className="muted">Map integration coming soon.</p>
-        </section>
-
-        <section className="lobby-view__section">
-          <h2>Chat</h2>
-          <div className="chat-log">
-            {chatMessages.length === 0 ? (
-              <p className="muted">No messages yet.</p>
+            <h2>Members</h2>
+            {members.length === 0 ? (
+              <p className="muted">No members yet.</p>
             ) : (
-              chatMessages
-                .slice()
-                .sort((a, b) => Number(a.ts) - Number(b.ts))
-                .map((msg, idx) => (
-                  <div key={`${msg.ts}-${idx}`} className="chat-message">
-                    <strong>{msg.user || 'anon'}:</strong> <span>{msg.text}</span>
-                  </div>
-                ))
+              <ul className="lobby-members">
+                {members.map((name) => (
+                  <li key={name} className="member">
+                    <span className="avatar-circle" aria-hidden />
+                    <Link to={`/profile/${encodeURIComponent(name)}`}>{name}</Link>
+                  </li>
+                ))}
+              </ul>
             )}
-          </div>
-          <div className="chat-input">
-            <textarea
-              id="chatMessage"
-              name="chatMessage"
-              placeholder="Enter message here"
-              value={messageText}
-              onChange={(e) => setMessageText(e.target.value)}
-              disabled={sendBusy}
-            />
-            <button type="button" onClick={handleSendMessage} disabled={sendBusy}>
-              <strong>{sendBusy ? 'Sending...' : 'Send'}</strong>
-            </button>
-          </div>
-        </section>
+          </section>
+
+          {lobby.joke && (
+            <section className="lobby-view__section">
+              <h2>Lobby joke</h2>
+              <p className="muted">{lobby.joke}</p>
+            </section>
+          )}
+
+          <section className="lobby-view__section">
+            <h2>Location</h2>
+            <p>{lobby.location}</p>
+            <p className="muted">Map integration coming soon.</p>
+          </section>
+        </div>
+
+        <div className="lobby-view__card card lobby-view__card--chat">
+          <section className="lobby-view__section">
+            <h2>Chat</h2>
+            <div className="chat-log">
+              {chatMessages.length === 0 ? (
+                <p className="muted">No messages yet.</p>
+              ) : (
+                chatMessages
+                  .slice()
+                  .sort((a, b) => Number(a.ts) - Number(b.ts))
+                  .map((msg, idx) => {
+                    const isSelf = msg.user?.toLowerCase?.() === normalizedUser;
+                    return (
+                      <div
+                        key={`${msg.ts}-${idx}`}
+                        className={`message ${isSelf ? 'me' : 'them'}`}
+                      >
+                        <div className="chat-message__meta">
+                          <strong>{msg.user || 'anon'}</strong>
+                          <span className="chat-message__time">{formatTimestamp(msg.ts)}</span>
+                        </div>
+                        <div>{msg.text}</div>
+                      </div>
+                    );
+                  })
+              )}
+            </div>
+            <div className="chat-input">
+              <textarea
+                id="chatMessage"
+                name="chatMessage"
+                placeholder="Enter message here"
+                value={messageText}
+                onChange={(e) => setMessageText(e.target.value)}
+                disabled={sendBusy}
+              />
+              <button type="button" onClick={handleSendMessage} disabled={sendBusy}>
+                <strong>{sendBusy ? 'Sending...' : 'Send'}</strong>
+              </button>
+            </div>
+          </section>
+        </div>
       </div>
     </main>
   );
