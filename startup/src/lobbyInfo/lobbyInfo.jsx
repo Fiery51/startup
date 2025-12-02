@@ -1,12 +1,16 @@
 // src/lobbyInfo/lobbyInfo.jsx
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { ChatEvent, createChatNotifier } from '../chat/chatNotifier';
 import '../styles.css';
 
 export function LobbyInfo() {
   const { id } = useParams();
   const [lobby, setLobby] = useState(null);
   const [members, setMembers] = useState([]);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [messageText, setMessageText] = useState('');
+  const [sendBusy, setSendBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [joinBusy, setJoinBusy] = useState(false);
@@ -34,13 +38,25 @@ export function LobbyInfo() {
     return { lobbyData, membersData };
   }, [id]);
 
+  const fetchChatMessages = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/lobbies/${id}/chat`);
+      const data = await res.json().catch(() => []);
+      if (!res.ok) throw new Error(data.error || 'Failed to load chat');
+      setChatMessages(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.warn('Failed to fetch chat', err);
+    }
+  }, [id]);
+
   const refresh = useCallback(async () => {
     const { lobbyData, membersData } = await fetchDetails();
     setLobby(lobbyData);
     setMembers(Array.isArray(membersData) ? membersData : []);
-    setIsMember(membersData.some(name => name.toLowerCase() === normalizedUser));
+    setIsMember(membersData.some((name) => name.toLowerCase() === normalizedUser));
+    await fetchChatMessages();
     setError(null);
-  }, [fetchDetails, normalizedUser]);
+  }, [fetchDetails, fetchChatMessages, normalizedUser]);
 
   useEffect(() => {
     let cancelled = false;
@@ -51,7 +67,8 @@ export function LobbyInfo() {
         if (!cancelled) {
           setLobby(lobbyData);
           setMembers(Array.isArray(membersData) ? membersData : []);
-          setIsMember(membersData.some(name => name.toLowerCase() === normalizedUser));
+          setIsMember(membersData.some((name) => name.toLowerCase() === normalizedUser));
+          await fetchChatMessages();
           setError(null);
         }
       } catch (err) {
@@ -61,8 +78,27 @@ export function LobbyInfo() {
       }
     })();
 
-    return () => { cancelled = true; };
-  }, [fetchDetails, normalizedUser]);
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchDetails, normalizedUser, fetchChatMessages]);
+
+  useEffect(() => {
+    const notifier = createChatNotifier(id);
+    notifier.joinLobby(id);
+
+    const handler = (event) => {
+      if (event.type === ChatEvent.Chat && event.payload) {
+        setChatMessages((prev) => [...prev, event.payload]);
+      }
+    };
+    notifier.addHandler(handler);
+
+    return () => {
+      notifier.removeHandler(handler);
+      notifier.socket?.close();
+    };
+  }, [id]);
 
   async function handleJoin() {
     if (!rawUserName) return;
@@ -106,6 +142,28 @@ export function LobbyInfo() {
       alert(err.message);
     } finally {
       setLeaveBusy(false);
+    }
+  }
+
+  async function handleSendMessage() {
+    const text = messageText.trim();
+    if (!text) return;
+    try {
+      setSendBusy(true);
+      const res = await fetch(`/api/lobbies/${id}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, userName: rawUserName || 'anon' }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to send message');
+      }
+      setMessageText('');
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setSendBusy(false);
     }
   }
 
@@ -156,7 +214,7 @@ export function LobbyInfo() {
             <p className="muted">No members yet.</p>
           ) : (
             <ul className="lobby-members">
-              {members.map(name => (
+              {members.map((name) => (
                 <li key={name} className="member">
                   <span className="avatar-circle" aria-hidden />
                   <Link to={`/profile/${encodeURIComponent(name)}`}>{name}</Link>
@@ -182,11 +240,31 @@ export function LobbyInfo() {
         <section className="lobby-view__section">
           <h2>Chat</h2>
           <div className="chat-log">
-            This will be connected to a chat later — we need a database.
+            {chatMessages.length === 0 ? (
+              <p className="muted">No messages yet.</p>
+            ) : (
+              chatMessages
+                .slice()
+                .sort((a, b) => Number(a.ts) - Number(b.ts))
+                .map((msg, idx) => (
+                  <div key={`${msg.ts}-${idx}`} className="chat-message">
+                    <strong>{msg.user || 'anon'}:</strong> <span>{msg.text}</span>
+                  </div>
+                ))
+            )}
           </div>
           <div className="chat-input">
-            <textarea id="chatMessage" name="chatMessage" placeholder="Enter message here" />
-            <button type="button"><strong>Send</strong></button>
+            <textarea
+              id="chatMessage"
+              name="chatMessage"
+              placeholder="Enter message here"
+              value={messageText}
+              onChange={(e) => setMessageText(e.target.value)}
+              disabled={sendBusy}
+            />
+            <button type="button" onClick={handleSendMessage} disabled={sendBusy}>
+              <strong>{sendBusy ? 'Sending...' : 'Send'}</strong>
+            </button>
           </div>
         </section>
       </div>

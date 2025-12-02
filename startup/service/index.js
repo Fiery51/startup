@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
 const bcrypt = require('bcryptjs');
 const { connectToDatabase } = require('./db');
+const { peerProxy, broadcastToLobby } = require('./peerProxy');
 
 const app = express();
 const port = process.argv.length > 2 ? process.argv[2] : 4000;
@@ -457,6 +458,7 @@ app.post('/api/lobbies/:id/chat', async (req, res) => {
   if (!text) return res.status(400).json({ error: 'Empty message' });
   const msg = { lobbyId, user, text, ts: Date.now() };
   await collections.chats.insertOne(msg);
+  broadcastToLobby(lobby.id?.toString(), { user, text, ts: msg.ts });
   res.status(201).json({ user, text, ts: msg.ts });
 });
 
@@ -533,9 +535,10 @@ async function start() {
       collections.chats.createIndex({ lobbyId: 1, ts: 1 }),
     ]);
 
-    app.listen(port, () => {
+    const httpService = app.listen(port, () => {
       console.log(`Listening on port ${port}`);
     });
+    peerProxy(httpService);
   } catch (err) {
     console.error('Failed to start server', err);
     process.exit(1);
