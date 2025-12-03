@@ -290,7 +290,53 @@ footer{
 .bio{ text-align:center; margin-left:2.5%; margin-top:2.5%; max-width:25%;
       background:rgba(189,189,189,.219); border-radius:25px; }
 .interests{ margin-top:2.5%; margin-left:2.5%; }
-.loginContainer{ display:flex; flex-direction:column; text-align:center; justify-content:center; gap:5vh; margin-bottom:15%; }
+.login-page{
+  display:flex;
+  justify-content:center;
+}
+.loginContainer{
+  display:flex;
+  flex-direction:column;
+  text-align:center;
+  justify-content:center;
+  gap:3vh;
+  margin-bottom:15%;
+}
+
+/* Login form layout */
+.login-form{
+  width: min(420px, 90vw);
+  margin: 0 auto;
+  display:flex;
+  flex-direction:column;
+  gap:0.75rem;
+  text-align:left;
+}
+
+.login-input{
+  width:100%;
+  padding:0.65rem 0.75rem;
+  border-radius:10px;
+  border:1px solid rgba(0,0,0,0.1);
+  background:#ffffff;
+  color:#0a0a0a;
+  font-size:1rem;
+  box-shadow:0 1px 2px rgba(0,0,0,0.05);
+}
+
+.login-actions{
+  margin-top:0.5rem;
+  display:flex;
+  flex-direction:column;
+  gap:0.5rem;
+}
+
+.form-msg{
+  margin-top:0.75rem;
+}
+.form-msg--error{
+  color: var(--danger);
+}
 
 .dashboard{
   padding: 2rem clamp(1rem, 5vw, 3rem);

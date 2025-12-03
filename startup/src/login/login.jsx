@@ -53,45 +53,47 @@ export function Login({ onLogin }) {
 
 
   return (
-    <main>
+    <main className="login-page">
       <div className="loginContainer">
         <h1>Login</h1>
-        <form onSubmit={(e) => { e.preventDefault(); apiLogin(); }}>
-          <label htmlFor="username">Username:</label>
-          <br />
+        <form
+          className="login-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            apiLogin();
+          }}
+        >
+          <label htmlFor="username">Username</label>
           <input
+            className="login-input"
             type="text"
             name="username"
             id="username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
           />
-          <br />
-          <label htmlFor="password">Password:</label>
-          <br />
+
+          <label htmlFor="password">Password</label>
           <input
+            className="login-input"
             type="password"
             name="password"
             id="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
+
+          <div className="login-actions">
+            <button className="kbtn" type="button" onClick={apiLogin} disabled={!username || !password}>
+              Log in
+            </button>
+            <button className="kbtn kbtn-secondary" type="button" onClick={apiCreate} disabled={!username || !password}>
+              Create account
+            </button>
+          </div>
         </form>
 
-        <div style={{ marginTop: '.75rem', display: 'flex', gap: '.5rem' }}>
-          <button className="kbtn" type="button" onClick={apiLogin} disabled={!username || !password}>
-            Log in
-          </button>
-          <button className="kbtn kbtn-secondary" type="button" onClick={apiCreate} disabled={!username || !password}>
-            Create account
-          </button>
-        </div>
-
-        <div style={{ marginTop: '1rem', opacity: .75 }}>
-          Login W/ Google Button
-        </div>
-
-        {msg && <p style={{ color: 'var(--danger)', marginTop: '.75rem' }}>{msg}</p>}
+        {msg && <p className="form-msg form-msg--error">{msg}</p>}
       </div>
     </main>
   );
