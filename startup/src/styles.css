@@ -27,6 +27,9 @@ main{ display:block; } /* pages define layout themselves */
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid rgba(15,23,42,.08);
   margin-bottom: 3rem;
+  position: sticky; /* keep header visible and create stacking context */
+  top: 0;
+  z-index: 30;
 }
 .app-header__inner{
   display:flex;
@@ -94,6 +97,7 @@ main{ display:block; } /* pages define layout themselves */
   position:absolute;
   right:0;
   top: calc(100% + .5rem);
+  z-index: 100; /* sit above page content */
   background: rgb(var(--card));
   border: 1px solid rgba(15,23,42,.08);
   box-shadow: 0 18px 40px rgba(15,23,42,.18);
@@ -481,6 +485,15 @@ body.modal-open {
 .field-input.field-textarea{
   min-height: 120px;
   resize: vertical;
+}
+
+.map-preview{
+  width:100%;
+  height:240px;
+  border-radius:12px;
+  border:1px solid rgba(15,23,42,.08);
+  overflow:hidden;
+  background: #f3f4f6;
 }
 
 .profile-view{

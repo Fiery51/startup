@@ -6,6 +6,24 @@ const bcrypt = require('bcryptjs');
 const { connectToDatabase } = require('./db');
 const { peerProxy, broadcastToLobby } = require('./peerProxy');
 
+const secureCookie = process.env.NODE_ENV === 'production';
+
+const adminUsers = new Set(
+  (process.env.ADMIN_USERS || '')
+    .split(',')
+    .map((n) => (n || '').trim().toLowerCase())
+    .filter(Boolean)
+);
+
+let mapsConfig = { apiKey: '' };
+try {
+  // Load server-side maps config (not checked into VCS)
+  // eslint-disable-next-line global-require, import/no-dynamic-require
+  mapsConfig = require('./mapsConfig.json');
+} catch {
+  console.warn('mapsConfig.json not found; /api/maps-key will return empty apiKey');
+}
+
 const app = express();
 const port = process.argv.length > 2 ? process.argv[2] : 4000;
 const authCookieName = 'token';
@@ -58,13 +76,19 @@ const collections = {
 
 const normalizeName = (name) => (name || '').toString().trim().toLowerCase();
 
+const isAdminUser = (user) => {
+  if (!user) return false;
+  const normalized = normalizeName(user.userName);
+  return user.role === 'admin' || adminUsers.has(normalized);
+};
+
 function parseLobbyNumber(id) {
   const num = Number(id);
   if (!Number.isFinite(num)) return null;
   return num;
 }
 
-function toLobbyResponse(doc) {
+function toLobbyResponse(doc, user = null) {
   if (!doc) return null;
   return {
     id: doc.id,
@@ -75,6 +99,10 @@ function toLobbyResponse(doc) {
     location: doc.location,
     people: doc.people ?? 0,
     joke: doc.joke,
+    coords: doc.coords ? { lat: doc.coords.lat, lng: doc.coords.lng } : null,
+    creatorUserId: doc.creatorUserId ? doc.creatorUserId.toString() : undefined,
+    creatorUserName: doc.creatorUserName,
+    canEdit: isOwnerOrAdmin(user, doc),
   };
 }
 
@@ -140,17 +168,17 @@ async function fetchLobbyJoke() {
 function setAuthCookie(res, authToken) {
   res.cookie(authCookieName, authToken, {
     maxAge: 1000 * 60 * 60 * 24 * 365,
-    secure: true,
+    secure: secureCookie,
     httpOnly: true,
-    sameSite: 'strict',
+    sameSite: secureCookie ? 'strict' : 'lax',
   });
 }
 
 function clearAuthCookie(res) {
   res.clearCookie(authCookieName, {
-    secure: true,
+    secure: secureCookie,
     httpOnly: true,
-    sameSite: 'strict',
+    sameSite: secureCookie ? 'strict' : 'lax',
   });
 }
 
@@ -178,6 +206,13 @@ function validateLobby(body) {
       return 'people cannot exceed max';
     }
   }
+  if (body.coords) {
+    const lat = Number(body.coords.lat);
+    const lng = Number(body.coords.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      return 'coords.lat and coords.lng must be numbers';
+    }
+  }
   return null;
 }
 
@@ -185,6 +220,12 @@ async function getLobbyByPublicId(idParam) {
   const numericId = parseLobbyNumber(idParam);
   if (numericId === null) return null;
   return collections.lobbies.findOne({ id: numericId });
+}
+
+function isOwnerOrAdmin(user, lobby) {
+  if (!user || !lobby) return false;
+  if (user.role === 'admin') return true;
+  return lobby.creatorUserId && lobby.creatorUserId.toString() === user.id;
 }
 
 async function getNextLobbyId() {
@@ -232,6 +273,7 @@ app.post('/api/users', async (req, res) => {
       userName: userName.trim(),
       normalizedUserName: normalized,
       password: passwordHash,
+      role: adminUsers.has(normalized) ? 'admin' : 'user',
       memberSince: new Date().toISOString().slice(0, 10),
       createdAt: new Date(),
     };
@@ -255,8 +297,16 @@ app.post('/api/login', async (req, res) => {
     return res.status(401).json({ error: 'Invalid credentials' });
   }
 
+  if (isAdminUser(user) && user.role !== 'admin') {
+    await collections.users.updateOne(
+      { _id: user._id },
+      { $set: { role: 'admin' } }
+    );
+    user.role = 'admin';
+  }
+
   const token = jwt.sign(
-    { id: user._id.toString(), userName: user.userName },
+    { id: user._id.toString(), userName: user.userName, role: user.role || 'user' },
     process.env.JWT_SECRET || 'likeASecretKeyOrSomethinIdkMan',
     { expiresIn: '1h' }
   );
@@ -270,20 +320,25 @@ app.post('/api/logout', (req, res) => {
   res.status(204).end();
 });
 
+// ===================== MAPS KEY ===========================
+app.get('/api/maps-key', (_req, res) => {
+  res.json({ apiKey: mapsConfig.apiKey || '' });
+});
+
 // ===================== LOBBIES ============================
 
 app.get('/api/lobbies', async (_req, res) => {
   const lobbies = await collections.lobbies.find({}).sort({ createdAt: -1 }).toArray();
-  res.json(lobbies.map(toLobbyResponse));
+  res.json(lobbies.map((l) => toLobbyResponse(l)));
 });
 
 app.get('/api/lobbies/:id', async (req, res) => {
   const lobby = await getLobbyByPublicId(req.params.id);
   if (!lobby) return res.status(404).json({ error: 'Not found' });
-  res.json(toLobbyResponse(lobby));
+  res.json(toLobbyResponse(lobby, req.user));
 });
 
-app.post('/api/lobbies', async (req, res) => {
+app.post('/api/lobbies', requireAuth, async (req, res) => {
   const raw = req.body || {};
   const body = {
     name: (raw.name ?? '').toString().trim(),
@@ -292,6 +347,7 @@ app.post('/api/lobbies', async (req, res) => {
     location: (raw.location ?? '').toString().trim(),
     max: Number(raw.max),
     people: 0,
+    coords: raw.coords ? { lat: Number(raw.coords.lat), lng: Number(raw.coords.lng) } : undefined,
   };
 
   const err = validateLobby(body);
@@ -300,6 +356,8 @@ app.post('/api/lobbies', async (req, res) => {
   const doc = {
     ...body,
     id: await getNextLobbyId(),
+    creatorUserId: req.user?.id,
+    creatorUserName: req.user?.userName,
     createdAt: new Date(),
   };
   const joke = await fetchLobbyJoke();
@@ -307,12 +365,13 @@ app.post('/api/lobbies', async (req, res) => {
 
   const result = await collections.lobbies.insertOne(doc);
   const inserted = await collections.lobbies.findOne({ _id: result.insertedId });
-  res.status(201).json(toLobbyResponse(inserted));
+  res.status(201).json(toLobbyResponse(inserted, req.user));
 });
 
-app.put('/api/lobbies/:id', async (req, res) => {
+app.put('/api/lobbies/:id', requireAuth, async (req, res) => {
   const lobby = await getLobbyByPublicId(req.params.id);
   if (!lobby) return res.status(404).json({ error: 'Not found' });
+  if (!isOwnerOrAdmin(req.user, lobby)) return res.status(403).json({ error: 'Forbidden' });
   const raw = req.body || {};
   const body = {
     name: (raw.name ?? '').toString().trim(),
@@ -320,6 +379,7 @@ app.put('/api/lobbies/:id', async (req, res) => {
     time: (raw.time ?? '').toString().trim(),
     location: (raw.location ?? '').toString().trim(),
     max: Number(raw.max),
+    coords: raw.coords ? { lat: Number(raw.coords.lat), lng: Number(raw.coords.lng) } : lobby.coords,
   };
   const members = await collections.memberships.countDocuments({ lobbyId: lobby._id });
   const err = validateLobby({ ...body, people: members });
@@ -332,15 +392,19 @@ app.put('/api/lobbies/:id', async (req, res) => {
     { $set: { ...body, people: members } }
   );
   const updated = await collections.lobbies.findOne({ _id: lobby._id });
-  res.json(toLobbyResponse(updated));
+  res.json(toLobbyResponse(updated, req.user));
 });
 
-app.patch('/api/lobbies/:id', async (req, res) => {
+app.patch('/api/lobbies/:id', requireAuth, async (req, res) => {
   const lobby = await getLobbyByPublicId(req.params.id);
   if (!lobby) return res.status(404).json({ error: 'Not found' });
+  if (!isOwnerOrAdmin(req.user, lobby)) return res.status(403).json({ error: 'Forbidden' });
   const patch = { ...(req.body || {}) };
   if (patch.people !== undefined) delete patch.people;
   if (patch.max !== undefined) patch.max = Number(patch.max);
+  if (patch.coords) {
+    patch.coords = { lat: Number(patch.coords.lat), lng: Number(patch.coords.lng) };
+  }
   const members = await collections.memberships.countDocuments({ lobbyId: lobby._id });
   const merged = { ...lobby, ...patch, people: members };
   const err = validateLobby(merged);
@@ -350,12 +414,13 @@ app.patch('/api/lobbies/:id', async (req, res) => {
     { $set: merged }
   );
   const updated = await collections.lobbies.findOne({ _id: lobby._id });
-  res.json(toLobbyResponse(updated));
+  res.json(toLobbyResponse(updated, req.user));
 });
 
-app.delete('/api/lobbies/:id', async (req, res) => {
+app.delete('/api/lobbies/:id', requireAuth, async (req, res) => {
   const lobby = await getLobbyByPublicId(req.params.id);
   if (!lobby) return res.status(404).json({ error: 'Not found' });
+  if (!isOwnerOrAdmin(req.user, lobby)) return res.status(403).json({ error: 'Forbidden' });
   await collections.lobbies.deleteOne({ _id: lobby._id });
   await collections.memberships.deleteMany({ lobbyId: lobby._id });
   await collections.chats.deleteMany({ lobbyId: lobby._id });

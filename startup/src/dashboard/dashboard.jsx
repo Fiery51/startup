@@ -1,15 +1,19 @@
 // src/dashboard/dashboard.jsx
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../styles.css';
 import { LobbyCard } from '../components/lobbyCard';
+import { loadGoogleMaps } from '../lib/maps';
 
 const createEmptyLobbyForm = () => ({
   name: '',
   tag: 'Casual',
   max: 10,
+  date: '',
+  timeOfDay: '',
   time: '',
   location: '',
+  coords: null,
 });
 
 export function Dashboard() {
@@ -22,6 +26,11 @@ export function Dashboard() {
   const [error, setError] = useState(null);
   const userName = localStorage.getItem('userName') || '';
   const navigate = useNavigate();
+  const locationInputRef = useRef(null);
+  const mapPreviewRef = useRef(null);
+  const mapInstanceRef = useRef(null);
+  const mapMarkerRef = useRef(null);
+  const [fallbackCoords, setFallbackCoords] = useState(null);
 
   const fetchData = useCallback(async () => {
     const [lobbyRes, joinedRes] = await Promise.all([
@@ -88,6 +97,89 @@ export function Dashboard() {
     };
   }, [isCreateModalOpen]);
 
+  // Try to center map around user's area when modal opens (rounded coords)
+  useEffect(() => {
+    if (!isCreateModalOpen || fallbackCoords) return;
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        const rounded = {
+          lat: Math.round(latitude * 100) / 100,
+          lng: Math.round(longitude * 100) / 100,
+        };
+        setFallbackCoords(rounded);
+      },
+      () => {
+        // fallback to a generic center if permission denied
+        setFallbackCoords((prev) => prev || { lat: 39.5, lng: -98.35 });
+      },
+      { maximumAge: 600000, timeout: 5000 }
+    );
+  }, [isCreateModalOpen, fallbackCoords]);
+
+  // Attach Google Places autocomplete to the location input when modal opens
+  useEffect(() => {
+    if (!isCreateModalOpen) return undefined;
+    let autocomplete = null;
+    (async () => {
+      try {
+        const google = await loadGoogleMaps();
+        if (!locationInputRef.current || !google?.maps?.places) return;
+        autocomplete = new google.maps.places.Autocomplete(locationInputRef.current, {
+          fields: ['formatted_address', 'geometry', 'name'],
+        });
+        autocomplete.addListener('place_changed', () => {
+          const place = autocomplete.getPlace();
+          const locationLabel = place.name || place.formatted_address || '';
+          const lat = place.geometry?.location?.lat();
+          const lng = place.geometry?.location?.lng();
+          setForm((f) => ({
+            ...f,
+            location: locationLabel,
+            coords: lat && lng ? { lat, lng } : f.coords,
+          }));
+        });
+      } catch (err) {
+        console.warn('Maps autocomplete init failed', err);
+      }
+    })();
+    return () => {
+      if (autocomplete) {
+        autocomplete.unbindAll?.();
+      }
+    };
+  }, [isCreateModalOpen]);
+
+  // Render map preview when coords change
+  useEffect(() => {
+    const target = form.coords || fallbackCoords;
+    if (!target || !mapPreviewRef.current) return;
+    (async () => {
+      try {
+        const google = await loadGoogleMaps();
+        if (!google?.maps) return;
+        const center = { lat: Number(target.lat), lng: Number(target.lng) };
+        if (!mapInstanceRef.current) {
+          mapInstanceRef.current = new google.maps.Map(mapPreviewRef.current, {
+            center,
+            zoom: 13,
+            disableDefaultUI: true,
+          });
+        } else {
+          mapInstanceRef.current.setCenter(center);
+        }
+        if (mapMarkerRef.current) {
+          mapMarkerRef.current.setPosition(center);
+        } else {
+          mapMarkerRef.current = new google.maps.Marker({ position: center, map: mapInstanceRef.current });
+        }
+      } catch (err) {
+        console.warn('Map preview render failed', err);
+      }
+    })();
+  }, [form.coords, fallbackCoords]);
+
   const joinedIds = useMemo(() => new Set(joined.map(l => String(l.id))), [joined]);
 
   const visible = useMemo(() => {
@@ -96,11 +188,15 @@ export function Dashboard() {
     return normalized.filter(item => item.tag === tag);
   }, [all, tag]);
 
-  const isFormValid = Boolean(form.name && form.time && form.location && form.max);
+  const isFormValid = Boolean(
+    form.name && form.date && form.timeOfDay && form.max
+  );
 
   async function handleAdd(event) {
     event.preventDefault();
     try {
+      const composedTime = `${form.date} ${form.timeOfDay}`.trim();
+      const locationLabel = form.location?.trim() || 'To be determined';
       const res = await fetch('/api/lobbies', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -108,8 +204,9 @@ export function Dashboard() {
           name: form.name,
           tag: form.tag,
           max: Number(form.max),
-          time: form.time,
-          location: form.location,
+          time: composedTime,
+          location: locationLabel,
+          coords: form.coords || null,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -274,16 +371,29 @@ export function Dashboard() {
                   />
                 </div>
               </div>
-              <div className="field">
-                <label className="field-label" htmlFor="lobby-time">Time</label>
-                <input
-                  id="lobby-time"
-                  className="field-input"
-                  required
-                  placeholder="Fri @ 8:00 PM"
-                  value={form.time}
-                  onChange={e => setForm(f => ({ ...f, time: e.target.value }))}
-                />
+              <div className="field field-row">
+                <div className="field">
+                  <label className="field-label" htmlFor="lobby-date">Date</label>
+                  <input
+                    id="lobby-date"
+                    className="field-input"
+                    type="date"
+                    required
+                    value={form.date}
+                    onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
+                  />
+                </div>
+                <div className="field">
+                  <label className="field-label" htmlFor="lobby-time">Time</label>
+                  <input
+                    id="lobby-time"
+                    className="field-input"
+                    type="time"
+                    required
+                    value={form.timeOfDay}
+                    onChange={e => setForm(f => ({ ...f, timeOfDay: e.target.value }))}
+                  />
+                </div>
               </div>
               <div className="field">
                 <label className="field-label" htmlFor="lobby-location">Location</label>
@@ -292,9 +402,11 @@ export function Dashboard() {
                   className="field-input"
                   required
                   placeholder="Student housing courtyard"
+                  ref={locationInputRef}
                   value={form.location}
                   onChange={e => setForm(f => ({ ...f, location: e.target.value }))}
                 />
+                <div className="map-preview" ref={mapPreviewRef} aria-label="Map preview" />
               </div>
 
               <div className="modal-actions">
