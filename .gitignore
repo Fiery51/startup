@@ -1,2 +1,3 @@
 **/node_modules/
 startup/service/dbConfig.json
+startup/service/mapsConfig.json
